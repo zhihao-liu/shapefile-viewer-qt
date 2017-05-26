@@ -12,26 +12,39 @@ class QPainter;
 class QColor;
 class QTime;
 class QPoint;
+class QString;
 
 namespace cl
 {
 class GraphicAssistant;
 class Shape;
 
+class ShapeDocsObserver
+{
+public:
+    virtual void updateDisplay() = 0;
+    virtual QRect const paintingRect() const = 0;
+    virtual void setLabel(QString const& ) {}
+
+protected:
+    ShapeDocsObserver() {}
+};
+
 class ShapeDocsPrivate;
 class ShapeDocs
 {
 public:
-    ShapeDocs(MainWindow& observer);
+    ShapeDocs();
     GraphicAssistant& assistant() const;
+    void setObserver(ShapeDocsObserver& observer);
     void refresh() const;
     bool isEmpty() const;
-    bool addShape(std::string path);
-    void removeShape(std::string id);
+    bool addShape(std::string const& path);
+    void removeShape(std::string const& name);
     void drawAllShapes(QPainter& painter) const;
     void clear();
-    std::string nameOf(int index) const;
-    std::shared_ptr<Shape const> findByName(std::string name) const;
+    std::string const& nameOf(int index) const;
+    std::shared_ptr<Shape const> findByName(std::string const& name) const;
     int listSize() const;
     Bounds computeGlobalBounds() const;
 
@@ -42,19 +55,18 @@ private:
 class ShapeManager
 {
 public:
-    static void setData(MainWindow& observer);
     static ShapeDocs& data();
 
 private:
     static std::unique_ptr<ShapeDocs> _data;
 };
 
-class Shape;
+class GraphicAssistantPrivate;
 class GraphicAssistant
 {
 public:
     GraphicAssistant(ShapeDocs const& refDocs);
-    void setPainterRect(QRect const& painterRect);
+    void setPainterRect(QRect const& paintingRect);
     Pair<int> mapToDisplayXY(Pair<double> mapXY) const;
     Pair<double> displayToMapXY(Pair<int> displayXY) const;
     QPoint computePointOnDisplay(SHPObject const& record, int ptIndex) const;
@@ -66,11 +78,7 @@ public:
     void moveProcessing(QPoint const& currentPos);
 
 private:
-    ShapeDocs const& _refDocs;
-    Pair<double> _mapOrigin;
-    Pair<int> _displayOrigin;
-    float _scaleToDisplay;
-    QRect _painterRect;
+    std::unique_ptr<GraphicAssistantPrivate> _private;
 };
 }
 

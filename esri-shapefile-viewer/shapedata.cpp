@@ -17,47 +17,31 @@ class ShapePrivate
     friend class Polygon;
 
 public:
-    ~ShapePrivate()
-    {
-        if (_shpTree)
-            SHPDestroyTree(_shpTree);
-        if (_shpHandle)
-            SHPClose(_shpHandle);
-    }
+    ~ShapePrivate() {}
 
 private:
-    ShapePrivate(Shape& refThis, SHPHandle shpHandle, std::string name)
-        : _refThis(refThis), _shpHandle(shpHandle), _name(name)
-    {
-        _bounds.set(_shpHandle->adBoundsMin, _shpHandle->adBoundsMax);
-
-        _borderColor = QColor::fromHsl(qrand()%360, qrand()%256, qrand()%200);
-        _fillColor = QColor::fromHsl(qrand()%360, qrand()%256, qrand()%256);
-
-        _shpTree = SHPCreateTree(_shpHandle, 2, 10, nullptr, nullptr);
-        SHPTreeTrimExtraNodes(_shpTree);
-    }
+    ShapePrivate(Shape& refThis, ShapeDatasetSptr ptrDataset)
+        : _refThis(refThis), _ptrDataset(ptrDataset),
+          _borderColor(QColor::fromHsl(qrand()%360, qrand()%256, qrand()%200)),
+          _fillColor(QColor::fromHsl(qrand()%360, qrand()%256, qrand()%256)) {}
 
     Shape& _refThis;
 
-    SHPHandle _shpHandle;
-    SHPTree* _shpTree = nullptr;
-    std::string _name;
-    Bounds _bounds;
+    ShapeDatasetSptr _ptrDataset;
     QColor _borderColor, _fillColor; // Each object has a different but fixed color set.
 };
 }
 
 Shape::~Shape() {}
 
-std::string Shape::name() const
+std::string const& Shape::name() const
 {
-    return _private->_name;
+    return _private->_ptrDataset->name();
 }
 
-Shape::Shape(SHPHandle shpHandle, std::string name)
-    : _private(std::unique_ptr<ShapePrivate>(new ShapePrivate(*this, shpHandle, name)))
-{ }
+Shape::Shape(ShapeDatasetSptr ptrDataset)
+    : _private(std::unique_ptr<ShapePrivate>
+               (new ShapePrivate(*this, ptrDataset))) {}
 
 std::unique_ptr<ShapeFactory> ShapeFactoryESRI::_instance = nullptr;
 
@@ -68,30 +52,27 @@ ShapeFactory const& ShapeFactoryESRI::instance()
     return *_instance;
 }
 
-std::shared_ptr<Shape> ShapeFactoryESRI::createShape(std::string path) const
+std::shared_ptr<Shape> ShapeFactoryESRI::createShape(std::string const& path) const
 {
-    SHPHandle shpHandle = SHPOpen(path.c_str(), "rb+");
-    QFileInfo fileInfo(QString::fromStdString(path));
-    std::string name = fileInfo.baseName().toStdString();
-
-    switch (shpHandle->nShapeType)
+    ShapeDatasetSptr ptrDataset(path);
+    switch (ptrDataset->type())
     {
     case SHPT_POINT:
     case SHPT_POINTZ:
     case SHPT_POINTM:
-        return std::shared_ptr<Shape>(new Point(shpHandle, name));
+        return std::shared_ptr<Shape>(new Point(ptrDataset));
         break;
 
     case SHPT_ARC:
     case SHPT_ARCZ:
     case SHPT_ARCM:
-        return std::shared_ptr<Shape>(new Polyline(shpHandle, name));
+        return std::shared_ptr<Shape>(new Polyline(ptrDataset));
         break;
 
     case SHPT_POLYGON:
     case SHPT_POLYGONZ:
     case SHPT_POLYGONM:
-        return std::shared_ptr<Shape>(new Polygon(shpHandle, name));
+        return std::shared_ptr<Shape>(new Polygon(ptrDataset));
         break;
     default:
         return nullptr;
@@ -102,117 +83,217 @@ std::shared_ptr<Shape> ShapeFactoryESRI::createShape(std::string path) const
 int Point::draw(QPainter& painter, GraphicAssistant const& assistant) const
 {
     Bounds mapHitBounds = assistant.computeMapHitBounds();
-
-
-    double mapHitBoundsMin[2] = {mapHitBounds.xMin(), mapHitBounds.yMin()};
-    double mapHitBoundsMax[2] = {mapHitBounds.xMax(), mapHitBounds.yMax()};
-
-    int countRecordsHit;
-    int* recordsHit = SHPTreeFindLikelyShapes(_private->_shpTree, mapHitBoundsMin, mapHitBoundsMax, &countRecordsHit);
+    std::vector<int> recordsHit = _private->_ptrDataset->filterRecords(mapHitBounds);
 
     painter.setPen(QPen(_private->_borderColor));
     painter.setBrush(QBrush(_private->_fillColor));
 
-    for (int i = 0; i < countRecordsHit; ++i)
+    for (std::vector<int>::iterator itr = recordsHit.begin();
+         itr < recordsHit.end(); ++itr)
     {
-        SHPObject* record = SHPReadObject(_private->_shpHandle, recordsHit[i]);
-        QPoint point = assistant.computePointOnDisplay(*record, 0);
+        ShapeRecordUnique ptrRecord = _private->_ptrDataset->readRecord(*itr);
+        QPoint point = assistant.computePointOnDisplay(*ptrRecord, 0);
 
         int const r = 5;
 
         painter.drawEllipse(point, r, r);
-
-        SHPDestroyObject(record);
     }
 
-    return countRecordsHit;
+    return recordsHit.size();
 }
 
 int Polyline::draw(QPainter& painter, GraphicAssistant const& assistant) const
 {
     Bounds mapHitBounds = assistant.computeMapHitBounds();
-
-
-    double mapHitBoundsMin[2] = {mapHitBounds.xMin(), mapHitBounds.yMin()};
-    double mapHitBoundsMax[2] = {mapHitBounds.xMax(), mapHitBounds.yMax()};
-
-    int countRecordsHit;
-    int* recordsHit = SHPTreeFindLikelyShapes(_private->_shpTree, mapHitBoundsMin, mapHitBoundsMax, &countRecordsHit);
+    std::vector<int> recordsHit = _private->_ptrDataset->filterRecords(mapHitBounds);
 
     painter.setPen(QPen(_private->_borderColor));
     painter.setBrush(QBrush(_private->_fillColor));
 
-    for (int i = 0; i < countRecordsHit; ++i)
+    for (std::vector<int>::iterator itr = recordsHit.begin();
+         itr < recordsHit.end(); ++itr)
     {
-        SHPObject* record = SHPReadObject(_private->_shpHandle, recordsHit[i]);
-        record->panPartStart[record->nParts] = record->nVertices;
+        ShapeRecordUnique ptrRecord = _private->_ptrDataset->readRecord(*itr);
+        ptrRecord->panPartStart[ptrRecord->nParts] = ptrRecord->nVertices;
 
-        for (int partIndex = 0; partIndex < record->nParts; ++partIndex)
+        for (int partIndex = 0; partIndex < ptrRecord->nParts; ++partIndex)
         {
-            int nPartVertices = record->panPartStart[partIndex+1] - record->panPartStart[partIndex];
+            int nPartVertices = ptrRecord->panPartStart[partIndex+1] - ptrRecord->panPartStart[partIndex];
             QPoint partVertices[nPartVertices];
 
             int count = 0;
-            for (int vtxIndex = record->panPartStart[partIndex]; vtxIndex < record->panPartStart[partIndex+1]; ++vtxIndex)
-                partVertices[count++] = assistant.computePointOnDisplay(*record, vtxIndex);
+            for (int vtxIndex = ptrRecord->panPartStart[partIndex]; vtxIndex < ptrRecord->panPartStart[partIndex+1]; ++vtxIndex)
+                partVertices[count++] = assistant.computePointOnDisplay(*ptrRecord, vtxIndex);
 
             painter.drawPolyline(partVertices, nPartVertices);
         }
-
-        SHPDestroyObject(record);
     }
 
-    return countRecordsHit;
+    return recordsHit.size();
 }
 
 int Polygon::draw(QPainter& painter, GraphicAssistant const& assistant) const
 {
     Bounds mapHitBounds = assistant.computeMapHitBounds();
-
-
-    double mapHitBoundsMin[2] = {mapHitBounds.xMin(), mapHitBounds.yMin()};
-    double mapHitBoundsMax[2] = {mapHitBounds.xMax(), mapHitBounds.yMax()};
-
-    int countRecordsHit;
-    int* recordsHit = SHPTreeFindLikelyShapes(_private->_shpTree, mapHitBoundsMin, mapHitBoundsMax, &countRecordsHit);
+    std::vector<int> recordsHit = _private->_ptrDataset->filterRecords(mapHitBounds);
 
     painter.setPen(QPen(_private->_borderColor));
     painter.setBrush(QBrush(_private->_fillColor));
 
-    for (int i = 0; i < countRecordsHit; ++i)
+    for (std::vector<int>::iterator itr = recordsHit.begin();
+         itr < recordsHit.end(); ++itr)
     {
-        SHPObject* record = SHPReadObject(_private->_shpHandle, recordsHit[i]);
-        record->panPartStart[record->nParts] = record->nVertices;
+        ShapeRecordUnique ptrRecord = _private->_ptrDataset->readRecord(*itr);
+        ptrRecord->panPartStart[ptrRecord->nParts] = ptrRecord->nVertices;
 
-        for (int partIndex = 0; partIndex < record->nParts; ++partIndex)
+        for (int partIndex = 0; partIndex < ptrRecord->nParts; ++partIndex)
         {
-            int nPartVertices = record->panPartStart[partIndex+1] - record->panPartStart[partIndex];
+            int nPartVertices = ptrRecord->panPartStart[partIndex+1] - ptrRecord->panPartStart[partIndex];
             QPoint partVertices[nPartVertices];
 
             int count = 0;
-            for (int vtxIndex = record->panPartStart[partIndex]; vtxIndex < record->panPartStart[partIndex+1]; ++vtxIndex)
-                partVertices[count++] = assistant.computePointOnDisplay(*record, vtxIndex);
+            for (int vtxIndex = ptrRecord->panPartStart[partIndex]; vtxIndex < ptrRecord->panPartStart[partIndex+1]; ++vtxIndex)
+                partVertices[count++] = assistant.computePointOnDisplay(*ptrRecord, vtxIndex);
 
             painter.drawPolygon(partVertices, nPartVertices);
         }
-
-        SHPDestroyObject(record);
     }
 
-    return countRecordsHit;
+    return recordsHit.size();
+}
+
+int Shape::recordCount() const
+{
+    return _private->_ptrDataset->recordCount();
+}
+
+ShapeDatasetRC::ShapeDatasetRC(std::string const& path)
+    : _shpHandle(nullptr), _shpTree(nullptr), _refCount(1)
+{
+    _shpHandle = SHPOpen(path.c_str(), "rb+");
+    _shpTree = SHPCreateTree(_shpHandle, 2, 10, nullptr, nullptr);
+    SHPTreeTrimExtraNodes(_shpTree);
+
+    QFileInfo fileInfo(QString::fromStdString(path));
+    _name = fileInfo.baseName().toStdString();
+
+    _bounds.set(_shpHandle->adBoundsMin, _shpHandle->adBoundsMax);
 }
 
 Bounds const& Shape::bounds() const
 {
-    return _private->_bounds;
+    return _private->_ptrDataset->bounds();
+}
+ShapeDatasetRC::~ShapeDatasetRC()
+{
+    if(_shpHandle)
+    {
+        SHPClose(_shpHandle);
+        _shpHandle = nullptr;
+    }
+
+    if(_shpTree)
+    {
+        SHPDestroyTree(_shpTree);
+        _shpTree = nullptr;
+    }
 }
 
-SHPTree const& Shape::tree() const
+ShapeDatasetRC* ShapeDatasetRC::addRef()
 {
-    return *_private->_shpTree;
+    ++_refCount;
+    return this;
 }
 
-int Shape::countRecords() const
+ShapeDatasetSptr::ShapeDatasetSptr(std::string const& path)
 {
-    return _private->_shpHandle->nRecords;
+    _raw = new ShapeDatasetRC(path);
+}
+
+ShapeDatasetSptr::ShapeDatasetSptr(ShapeDatasetRC* shapeDataset)
+    : _raw(shapeDataset) {}
+
+
+ShapeDatasetSptr::ShapeDatasetSptr(ShapeDatasetSptr const& rhs)
+    : _raw(rhs._raw->addRef()) {}
+
+ShapeDatasetSptr& ShapeDatasetSptr::operator= (ShapeDatasetSptr const& rhs)
+{
+    if(this == &rhs)
+        return *this;
+
+    if(--_raw->_refCount == 0)
+        delete _raw;
+
+    _raw = rhs._raw->addRef();
+
+    return *this;
+}
+
+//ShapeDatasetSptr::ShapeDatasetSptr(ShapeDatasetSptr const& rhs)
+//    : _raw(rhs._raw)
+//{
+//    ++_raw->_refCount;
+//}
+
+//ShapeDatasetSptr& ShapeDatasetSptr::operator= (ShapeDatasetSptr const& rhs)
+//{
+//    if(this == &rhs)
+//        return *this;
+
+//    if(--_raw->_refCount == 0)
+//        delete _raw;
+
+//    _raw = rhs._raw;
+//    ++_raw->_refCount;
+
+//    return *this;
+//}
+
+ShapeDatasetSptr::~ShapeDatasetSptr()
+{
+    if(_raw && --_raw->_refCount == 0)
+        delete _raw;
+}
+
+std::vector<int> const ShapeDatasetRC::filterRecords(Bounds const& mapHitBounds) const
+{
+    double mapHitBoundsMin[2] = {mapHitBounds.xMin(), mapHitBounds.yMin()};
+    double mapHitBoundsMax[2] = {mapHitBounds.xMax(), mapHitBounds.yMax()};
+
+    int hitCount;
+    int* recordsHitArray = SHPTreeFindLikelyShapes(_shpTree, mapHitBoundsMin, mapHitBoundsMax, &hitCount);
+
+    std::vector<int> recordsHit;
+    for (int i = 0; i < hitCount; ++i)
+        recordsHit.push_back(recordsHitArray[i]);
+
+    return recordsHit;
+}
+
+ShapeRecordUnique::~ShapeRecordUnique()
+{
+    if(_raw)
+        SHPDestroyObject(_raw);
+}
+
+ShapeRecordUnique::ShapeRecordUnique(ShapeDatasetRC const& dataset, int index)
+    : _raw(SHPReadObject(dataset.handle(), index)) {}
+
+ShapeRecordUnique::ShapeRecordUnique(ShapeRecordUnique&& rhs)
+{
+    _raw = rhs._raw;
+    rhs._raw = nullptr;
+}
+
+ShapeRecordUnique& ShapeRecordUnique::operator= (ShapeRecordUnique&& rhs)
+{
+    _raw = rhs._raw;
+    rhs._raw = nullptr;
+    return *this;
+}
+
+ShapeRecordUnique ShapeDatasetRC::readRecord(int index) const
+{
+    return ShapeRecordUnique(*this, index);
 }

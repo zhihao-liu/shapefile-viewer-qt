@@ -5,6 +5,7 @@
 #include <string>
 #include "viewform.h"
 #include "sidebar.h"
+#include "shapemanager.h"
 
 class QLabel;
 
@@ -13,17 +14,17 @@ namespace Ui
 class MainWindow;
 }
 
-class MainWindow : public QMainWindow
+class MainWindow : public QMainWindow, public cl::ShapeDocsObserver
 {
     Q_OBJECT
 
 public:
-    explicit MainWindow(QWidget *parent = nullptr);
+    explicit MainWindow(QWidget* parent = nullptr);
     ~MainWindow();
 
-    void updateWidgets();
-    void setStatusLabel(QString msg);
-    QRect const viewRect() const;
+    virtual void updateDisplay();
+    virtual QRect const paintingRect() const;
+    virtual void setLabel(QString const& msg);
 
 private:
     std::unique_ptr<Ui::MainWindow> ui;

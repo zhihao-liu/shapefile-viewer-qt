@@ -28,19 +28,19 @@ SOURCES +=\
     ../shapelib/dbfopen.cpp \
     ../shapelib/shpopen.cpp \
     ../shapelib/shptree.cpp \
-    shapedata.cpp \
     main.cpp \
-    shapemanager.cpp \
     sidebar.cpp \
-    viewform.cpp
+    viewform.cpp \
+    shapemanager.cpp \
+    shapedata.cpp
 
 HEADERS  += mainwindow.h \
     ../shapelib/shapefil.h \
-    shapedata.h \
-    shapemanager.h \
     sidebar.h \
     viewform.h \
-    supports.h
+    supports.h \
+    shapedata.h \
+    shapemanager.h
 
 FORMS    += mainwindow.ui \
     viewform.ui \

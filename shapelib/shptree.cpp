@@ -673,7 +673,6 @@ static int SHPTreeNodeTrim( SHPTreeNode * psTreeNode )
 
 void SHPAPI_CALL
 SHPTreeTrimExtraNodes( SHPTree * hTree )
-
 {
     //SHPTreeNodeTrim( hTree->psRoot );
 }
