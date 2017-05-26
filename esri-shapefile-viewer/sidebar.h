@@ -15,11 +15,10 @@ class Sidebar : public QDockWidget
     Q_OBJECT
 
 public:
-    explicit Sidebar(QWidget *parent = nullptr);
+    explicit Sidebar(QWidget* parent = nullptr);
     ~Sidebar();
 
-    void updateListView();
-    //    void resize(QSize const& size);
+    void updateList();
 
 private:
     std::unique_ptr<Ui::Sidebar> ui;

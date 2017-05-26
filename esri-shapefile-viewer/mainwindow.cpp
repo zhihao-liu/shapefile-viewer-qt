@@ -3,38 +3,37 @@
 #include <QFileDialog>
 #include <QTime>
 #include <QLabel>
-#include "shapemanager.h"
 
-MainWindow::MainWindow(QWidget *parent)
+MainWindow::MainWindow(QWidget* parent)
     : QMainWindow(parent), ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
 
     qsrand(QTime::currentTime().second());
 
-    // initialize the view widget of shapes
+    // Initialize the view widget of shapes.
     _viewForm.reset(new ViewForm(this));
     setCentralWidget(_viewForm.get());
 
-    // initialize the sidebar widget
+    // Initialize the sidebar widget.
     _sidebar.reset(new Sidebar(this));
     addDockWidget(Qt::LeftDockWidgetArea, _sidebar.get(), Qt::Vertical);
 
-    // initialize the status label
+    // Initialize the status label.
     _msgLabel.reset(new QLabel());
     statusBar()->setStyleSheet(QString("QStatusBar::item{border: 0px}"));
     statusBar()->addWidget(_msgLabel.get());
 
-    // initialize the static data object
-    cl::ShapeManager::setData(*this);
+    // Bind the singleton dataset with this form as its observer.
+    cl::ShapeManager::data().setObserver(*this);
 
-    // connect the open file signal
+    // Connect the open file signal.
     connect(ui->actionOpen, SIGNAL(triggered(bool)), this, SLOT(openFile()));
-    // if the slot function name is wrong,
-    // without any error prompts the connection will not work
+    // If the slot function name is wrong,
+    // without any error prompts the connection will not work.
 
-    // show the main window
-    showMaximized();
+    // Show the main window.
+    show();
 }
 
 MainWindow::~MainWindow() {}
@@ -52,19 +51,19 @@ void MainWindow::openFile()
     cl::ShapeManager::data().addShape(sPath);
 }
 
-void MainWindow::updateWidgets()
+void MainWindow::updateDisplay()
 {
     _viewForm->update();
-    _sidebar->updateListView();
+    _sidebar->updateList();
     update();
 }
 
-QRect const MainWindow::viewRect() const
+QRect const MainWindow::paintingRect() const
 {
     return _viewForm->rect();
 }
 
-void MainWindow::setStatusLabel(QString msg)
+void MainWindow::setLabel(QString const& msg)
 {
     if (_msgLabel != nullptr)
         _msgLabel->setText(msg);

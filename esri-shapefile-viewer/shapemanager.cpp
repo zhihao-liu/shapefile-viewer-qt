@@ -6,7 +6,7 @@
 #include "shapedata.h"
 
 #define COVER 0.9
-#define MINI 1e-4
+#define EPS 1e-4
 
 using namespace cl;
 
@@ -17,52 +17,72 @@ class ShapeDocsPrivate
     friend class ShapeDocs;
 
 private:
-    ShapeDocsPrivate(ShapeDocs& refThis, MainWindow& observer)
-        : _refThis(refThis), _observer(observer), _assistant(refThis) {}
+    ShapeDocsPrivate(ShapeDocs& refThis)
+        : _refThis(refThis), _assistant(refThis), _rawObserver(nullptr) {}
 
     ShapeDocs& _refThis;
 
     std::vector<std::shared_ptr<Shape>> _shpList;
-    MainWindow& _observer;
     GraphicAssistant _assistant;
+    ShapeDocsObserver* _rawObserver;
+};
+
+class GraphicAssistantPrivate
+{
+    friend class GraphicAssistant;
+
+private:
+    GraphicAssistantPrivate(GraphicAssistant& refThis, ShapeDocs const& refDocs)
+        : _refThis(refThis), _refDocs(refDocs) {}
+
+    GraphicAssistant& _refThis;
+
+    ShapeDocs const& _refDocs;
+    Pair<double> _mapOrigin;
+    Pair<int> _displayOrigin;
+    float _scaleToDisplay;
+    QRect _paintingRect;
 };
 }
 
-ShapeDocs::ShapeDocs(MainWindow& observer)
+ShapeDocs::ShapeDocs()
     : _private(std::unique_ptr<ShapeDocsPrivate>
-               (new ShapeDocsPrivate(*this, observer))) {}
+               (new ShapeDocsPrivate(*this))) {}
+
+void ShapeDocs::setObserver(ShapeDocsObserver& observer)
+{
+    _private->_rawObserver =& observer;
+}
 
 void ShapeDocs::drawAllShapes(QPainter& painter) const
 {
-//    // painting stops working after adding this?
-//    if (isEmpty())
-//        return;
+    //    if (isEmpty())
+    //        return;
 
-    // refresh the QRect of the painting region on screen
-    _private->_assistant.setPainterRect(_private->_observer.viewRect());
+    // Refresh the QRect of the painting region on screen.
+    _private->_assistant.setPainterRect(_private->_rawObserver->paintingRect());
 
     int countRecordsHit = 0;
     int countRecordsTotal = 0;
-
-    std::vector<std::shared_ptr<Shape>>::iterator itr;
-    for (itr = _private->_shpList.begin(); itr < _private->_shpList.end(); ++itr)
+    for (std::vector<std::shared_ptr<Shape>>::iterator itr = _private->_shpList.begin();
+         itr < _private->_shpList.end(); ++itr)
     {
         countRecordsHit += (*itr)->draw(painter, _private->_assistant);
-        countRecordsTotal += (*itr)->countRecords();
+        countRecordsTotal += (*itr)->recordCount();
     }
 
-    float percentageHit = countRecordsHit / (countRecordsTotal + MINI);
+    float percentageHit = countRecordsHit / (countRecordsTotal + EPS);
 
-    QString msgPercentage = QString::number(percentageHit * 100, 'g', 4);
+    QString msgPercentage = QString::number(percentageHit*  100, 'g', 4);
     QString msgCountHit = QString::number(countRecordsHit);
     QString msgCountTotal = QString::number(countRecordsTotal);
 
-    _private->_observer.setStatusLabel("\t\t Records Hit: " + msgCountHit +
+    _private->_rawObserver->setLabel("\t\t Records Hit: " + msgCountHit +
                                        "\t\t Records Total: " + msgCountTotal +
                                        "\t\t Percentage Hit: " + msgPercentage +"%");
 }
 
-bool ShapeDocs::addShape(std::string path)
+bool ShapeDocs::addShape(std::string const& path)
 {
     std::shared_ptr<Shape> shp = ShapeFactoryESRI::instance().createShape(path);
     if (!shp)
@@ -75,13 +95,13 @@ bool ShapeDocs::addShape(std::string path)
     return true;
 }
 
-void ShapeDocs::removeShape(std::string Name)
+void ShapeDocs::removeShape(std::string const& name)
 {
-    std::vector<std::shared_ptr<Shape>>::iterator itr;
-    for (itr = _private->_shpList.begin(); itr < _private->_shpList.end(); ++itr)
+    for (std::vector<std::shared_ptr<Shape>>::iterator itr = _private->_shpList.begin();
+         itr < _private->_shpList.end(); ++itr)
     {
         std::string shpName = (*itr)->name();
-        if (shpName == Name)
+        if (shpName == name)
         {
             _private->_shpList.erase(itr);
             break;
@@ -92,7 +112,7 @@ void ShapeDocs::removeShape(std::string Name)
 
 void ShapeDocs::refresh() const
 {
-    _private->_observer.updateWidgets();
+    _private->_rawObserver->updateDisplay();
 }
 
 void ShapeDocs::clear()
@@ -102,13 +122,10 @@ void ShapeDocs::clear()
 
 std::unique_ptr<ShapeDocs> ShapeManager::_data = nullptr;
 
-void ShapeManager::setData(MainWindow& observer)
-{
-    _data.reset(new ShapeDocs(observer));
-}
-
 ShapeDocs& ShapeManager::data()
 {
+    if (_data == nullptr)
+        _data.reset(new ShapeDocs());
     return *_data;
 }
 
@@ -117,7 +134,7 @@ bool ShapeDocs::isEmpty() const
     return _private->_shpList.size() == 0 ? true : false;
 }
 
-std::string ShapeDocs::nameOf(int index) const
+std::string const& ShapeDocs::nameOf(int index) const
 {
     return _private->_shpList.at(index)->name();
 }
@@ -133,11 +150,12 @@ GraphicAssistant& ShapeDocs::assistant() const
 }
 
 GraphicAssistant::GraphicAssistant(ShapeDocs const& refDocs)
-    : _refDocs(refDocs) {}
+    : _private(std::unique_ptr<GraphicAssistantPrivate>
+               (new GraphicAssistantPrivate(*this, refDocs))) {}
 
-void GraphicAssistant::setPainterRect(QRect const& painterRect)
+void GraphicAssistant::setPainterRect(QRect const& paintingRect)
 {
-    _painterRect = painterRect;
+    _private->_paintingRect = paintingRect;
 }
 
 QPoint GraphicAssistant::computePointOnDisplay(SHPObject const& record, int ptIndex) const
@@ -149,74 +167,74 @@ QPoint GraphicAssistant::computePointOnDisplay(SHPObject const& record, int ptIn
 
 Pair<int> GraphicAssistant::mapToDisplayXY(Pair<double> mapXY) const
 {
-    return (mapXY - _mapOrigin) * Pair<double>(1, -1) * _scaleToDisplay + Pair<double>(_displayOrigin);
+    return (mapXY - _private->_mapOrigin)*  Pair<double>(1, -1)*  _private->_scaleToDisplay + Pair<double>(_private->_displayOrigin);
 }
 
 Pair<double> GraphicAssistant::displayToMapXY(Pair<int> displayXY) const
 {
-    return Pair<double>(displayXY - _displayOrigin) / _scaleToDisplay / Pair<double>(1, -1) + _mapOrigin;
+    return Pair<double>(displayXY - _private->_displayOrigin) / _private->_scaleToDisplay / Pair<double>(1, -1) + _private->_mapOrigin;
 }
 
 // make a specified layer fully displayed and centered
 void GraphicAssistant::zoomToLayer(Shape const& layer)
 {
-    _mapOrigin = Pair<double>(layer.bounds().xCenter(),
-                              layer.bounds().yCenter());
+    _private->_mapOrigin = Pair<double>(layer.bounds().xCenter(),
+                                        layer.bounds().yCenter());
 
-    _displayOrigin = Pair<int>::computeCenter(_painterRect);
+    _private->_displayOrigin = Pair<int>::computeCenter(_private->_paintingRect);
 
     Pair<double> mapRange(layer.bounds().xRange(),
                           layer.bounds().yRange());
 
-    Pair<float> scaleXY(float(_painterRect.width()) / mapRange.x(),
-                        float(_painterRect.height()) / mapRange.y());
+    Pair<float> scaleXY(float(_private->_paintingRect.width()) / mapRange.x(),
+                        float(_private->_paintingRect.height()) / mapRange.y());
 
-    // ensure the objects to be fully covered
-    _scaleToDisplay = COVER * scaleXY.smaller();
+    // Ensure the objects to be fully covered.
+    _private->_scaleToDisplay = COVER*  scaleXY.smaller();
 }
 
 Bounds GraphicAssistant::computeMapHitBounds() const
 {
-    Pair<double> cornerHitMin = displayToMapXY(Pair<int>(_painterRect.left(), _painterRect.bottom()));
-    Pair<double> cornerHitMax = displayToMapXY(Pair<int>(_painterRect.right(), _painterRect.top()));
+    Pair<double> cornerHitMin = displayToMapXY(Pair<int>(_private->_paintingRect.left(), _private->_paintingRect.bottom()));
+    Pair<double> cornerHitMax = displayToMapXY(Pair<int>(_private->_paintingRect.right(), _private->_paintingRect.top()));
     return Bounds(cornerHitMin, cornerHitMax);
 }
 
-std::shared_ptr<Shape const> ShapeDocs::findByName(std::string name) const
+std::shared_ptr<Shape const> ShapeDocs::findByName(std::string const& name) const
 {
-    std::vector<std::shared_ptr<Shape>>::iterator itr;
-    for (itr = _private->_shpList.begin(); itr < _private->_shpList.end(); ++itr)
+    for (std::vector<std::shared_ptr<Shape>>::iterator itr = _private->_shpList.begin();
+         itr < _private->_shpList.end(); ++itr)
         if (name == (*itr)->name())
             return *itr;
 
-    return nullptr; // name not found
+    return nullptr; // Name not found.
 }
 
 void GraphicAssistant::zoomAtCursor(QPoint const& mousePos, float scaleFactor)
 {
     Pair<int> displayOrigin(mousePos);
     Pair<double> mapOrigin = displayToMapXY(displayOrigin);
-    _displayOrigin = displayOrigin;
-    _mapOrigin = mapOrigin;
-    _scaleToDisplay *= scaleFactor;
+    _private->_displayOrigin = displayOrigin;
+    _private->_mapOrigin = mapOrigin;
+    _private->_scaleToDisplay *= scaleFactor;
 }
 
 void GraphicAssistant::zoomToAll()
 {
-    Bounds globalBounds = _refDocs.computeGlobalBounds();
+    Bounds globalBounds = _private->_refDocs.computeGlobalBounds();
 
-    _mapOrigin = Pair<double>(globalBounds.xCenter(),
-                              globalBounds.yCenter());
+    _private->_mapOrigin = Pair<double>(globalBounds.xCenter(),
+                                        globalBounds.yCenter());
 
-    _displayOrigin = Pair<int>::computeCenter(_painterRect);
+    _private->_displayOrigin = Pair<int>::computeCenter(_private->_paintingRect);
 
     Pair<double> mapRange(globalBounds.xRange(),
                           globalBounds.yRange());
 
-    Pair<float> scaleXY(float(_painterRect.width()) / mapRange.x(),
-                        float(_painterRect.height()) / mapRange.y());
+    Pair<float> scaleXY(float(_private->_paintingRect.width()) / mapRange.x(),
+                        float(_private->_paintingRect.height()) / mapRange.y());
 
-    _scaleToDisplay = COVER * scaleXY.smaller();
+    _private->_scaleToDisplay = COVER*  scaleXY.smaller();
 }
 
 Bounds ShapeDocs::computeGlobalBounds() const
@@ -252,11 +270,11 @@ void GraphicAssistant::moveStart(QPoint const& startPos)
     Pair<int> displayOriginNew(startPos);
     Pair<double> mapOriginNew = displayToMapXY(displayOriginNew);
 
-    _displayOrigin = displayOriginNew;
-    _mapOrigin = mapOriginNew;
+    _private->_displayOrigin = displayOriginNew;
+    _private->_mapOrigin = mapOriginNew;
 }
 
 void GraphicAssistant::moveProcessing(QPoint const& currentPos)
 {
-    _displayOrigin = Pair<int>(currentPos);
+    _private->_displayOrigin = Pair<int>(currentPos);
 }

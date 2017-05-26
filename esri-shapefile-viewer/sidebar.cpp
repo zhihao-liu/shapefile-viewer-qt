@@ -4,19 +4,19 @@
 #include "shapemanager.h"
 #include "shapedata.h"
 
-Sidebar::Sidebar(QWidget *parent)
+Sidebar::Sidebar(QWidget* parent)
     : QDockWidget(parent), ui(new Ui::Sidebar)
 {
     ui->setupUi(this);
 
-    // connect the item double-click signal
+    // Connect the item double-click signal.
     connect(ui->listWidget, SIGNAL(itemDoubleClicked(QListWidgetItem*)),
             this, SLOT(doubleClickItem(QListWidgetItem*)));
 }
 
 Sidebar::~Sidebar() {}
 
-void Sidebar::updateListView()
+void Sidebar::updateList()
 {
     ui->listWidget->clear();
 
@@ -28,7 +28,7 @@ void Sidebar::updateListView()
     }
 }
 
-// zoom to specified layer when double clicking it
+// Zoom to specified layer when double clicking it.
 void Sidebar::doubleClickItem(QListWidgetItem* itemClicked)
 {
     QString layerName = itemClicked->text();

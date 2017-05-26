@@ -6,7 +6,7 @@
 
 using namespace cl;
 
-ViewForm::ViewForm(QWidget *parent)
+ViewForm::ViewForm(QWidget* parent)
     : QWidget(parent), ui(new Ui::ViewForm)
 {
     ui->setupUi(this);
@@ -30,7 +30,7 @@ void ViewForm::wheelEvent(QWheelEvent* event)
 {
     QPoint mousePos = event->pos();
 
-    // zoom in once everytime the wheel turns 90 degrees
+    // Zoom in once everytime the wheel turns 90 degrees.
     float scaleFactor = 1 + (float(event->delta()) / 8 / 90);
 
     cl::ShapeManager::data().assistant().zoomAtCursor(mousePos, scaleFactor);

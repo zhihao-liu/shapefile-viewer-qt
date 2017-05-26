@@ -13,30 +13,99 @@ class QColor;
 namespace cl
 {
 class GraphicAssistant;
+class ShapeDatasetRC;
+
+class ShapeRecordUnique
+{
+public:
+    ShapeRecordUnique() : _raw(nullptr) {}
+    ShapeRecordUnique(ShapeDatasetRC const& dataset, int index);
+
+    // The move constructor and the move assignment operator,
+    // used for passing an r-value.
+    ShapeRecordUnique(ShapeRecordUnique&& rhs);
+    ShapeRecordUnique& operator= (ShapeRecordUnique&& rhs);
+
+    ~ShapeRecordUnique();
+
+    SHPObject& operator* () { return *_raw; }
+    SHPObject* operator-> () { return _raw; }
+    bool operator== (void* that) const { return _raw == that? true : false; }
+    bool operator!= (void* that) const { return _raw != that? true : false; }
+
+private:
+    SHPObject* _raw;
+};
+
+class ShapeDatasetRC
+{
+    friend class ShapeDatasetSptr;
+
+public:
+    ShapeDatasetRC(std::string const& path);
+    ~ShapeDatasetRC();
+
+    int type () const { return _shpHandle->nShapeType; }
+    SHPHandle const& handle() const { return _shpHandle; }
+    SHPTree const& tree() const { return *_shpTree; }
+    int recordCount() const { return _shpHandle->nRecords;}
+    ShapeRecordUnique readRecord(int index) const;
+    Bounds const& bounds() const { return _bounds; }
+    std::string const& name() const { return _name; }
+    std::vector<int> const filterRecords(Bounds const& mapHitBounds) const;
+
+private:
+    SHPHandle _shpHandle;
+    SHPTree* _shpTree;
+    int _refCount;
+    std::string _name;
+    Bounds _bounds;
+
+    ShapeDatasetRC* addRef();
+};
+
+class ShapeDatasetSptr
+{
+public:
+    ShapeDatasetSptr() : _raw(nullptr) {}
+    ShapeDatasetSptr(std::string const& path);
+    ShapeDatasetSptr(ShapeDatasetRC* shapeDataset);
+
+    ShapeDatasetSptr(ShapeDatasetSptr const& rhs);
+    ShapeDatasetSptr& operator= (ShapeDatasetSptr const& rhs);
+
+    ~ShapeDatasetSptr();
+
+    ShapeDatasetRC& operator* () { return *_raw; }
+    ShapeDatasetRC* operator-> () { return _raw; }
+    bool operator== (void* that) const { return _raw == that? true : false; }
+    bool operator!= (void* that) const { return _raw != that? true : false; }
+
+private:
+    ShapeDatasetRC* _raw;
+};
 
 class ShapePrivate;
 class Shape
 {
 public:
     virtual ~Shape();
-    std::string name() const;
-    int countRecords() const;
+    std::string const& name() const;
+    int recordCount() const;
     Bounds const& bounds() const;
-    SHPHandle const& handle() const ;
-    SHPTree const& tree() const;
 
-    // return the number of records hit according to the index tree
+    // Return the number of records hit according to the index tree.
     virtual int draw(QPainter& painter, GraphicAssistant const& assistant) const = 0;
 
 protected:
-    Shape(SHPHandle shpHandle, std::string name);
+    Shape(ShapeDatasetSptr ptrDataset);
     std::unique_ptr<ShapePrivate> _private;
 };
 
 class Point: public Shape
 {
 public:
-    Point(SHPHandle shpHandle, std::string name): Shape(shpHandle, name) {}
+    Point(ShapeDatasetSptr ptrDataset): Shape(ptrDataset) {}
     virtual ~Point() {}
     virtual int draw(QPainter& painter, GraphicAssistant const& assistant) const;
 };
@@ -44,7 +113,7 @@ public:
 class Polyline: public Shape
 {
 public:
-    Polyline(SHPHandle shpHandle, std::string name): Shape(shpHandle, name) {}
+    Polyline(ShapeDatasetSptr ptrDataset): Shape(ptrDataset) {}
     virtual ~Polyline() {}
     virtual int draw(QPainter& painter, GraphicAssistant const& assistant) const;
 };
@@ -52,7 +121,7 @@ public:
 class Polygon: public Shape
 {
 public:
-    Polygon(SHPHandle shpHandle, std::string name): Shape(shpHandle, name) {}
+    Polygon(ShapeDatasetSptr ptrDataset): Shape(ptrDataset) {}
     virtual ~Polygon() {}
     virtual int draw(QPainter& painter, GraphicAssistant const& assistant) const;
 };
@@ -64,7 +133,7 @@ class ShapeFactory
 {
 public:
     virtual ~ShapeFactory() {}
-    virtual std::shared_ptr<Shape> createShape(std::string path) const = 0;
+    virtual std::shared_ptr<Shape> createShape(std::string const& path) const = 0;
 
 protected:
     ShapeFactory() {}
@@ -74,7 +143,7 @@ class ShapeFactoryESRI: ShapeFactory
 {
 public:
     virtual ~ShapeFactoryESRI() {}
-    virtual std::shared_ptr<Shape> createShape(std::string path) const;
+    virtual std::shared_ptr<Shape> createShape(std::string const& path) const;
     static ShapeFactory const& instance();
 
 private:

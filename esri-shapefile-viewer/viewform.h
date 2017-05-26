@@ -13,7 +13,7 @@ class ViewForm : public QWidget
     Q_OBJECT
 
 public:
-    explicit ViewForm(QWidget *parent = nullptr);
+    explicit ViewForm(QWidget* parent = nullptr);
     ~ViewForm();
 
     void paintEvent(QPaintEvent*);

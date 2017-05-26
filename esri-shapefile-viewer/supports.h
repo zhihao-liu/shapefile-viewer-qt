@@ -22,60 +22,41 @@ public:
     Pair(Pair<thatType> const& that)
         : _x(that.x()), _y(that.y()) {}
 
-    Type const& x() const {return _x;}
-    Type const& y() const {return _y;}
+    Type const& x() const { return _x; }
+    Type const& y() const { return _y; }
 
-    QPoint toPoint() const
-    {
-        return QPoint(_x, _y);
-    }
+    QPoint toPoint() const { return QPoint(_x, _y); }
 
     Pair operator+ (Pair const& that) const
-    {
-        return Pair(_x + that._x, _y + that._y);
-    }
+    { return Pair(_x + that._x, _y + that._y); }
 
     Pair operator- (Pair const& that) const
-    {
-        return Pair(_x - that._x, _y - that._y);
-    }
+    { return Pair(_x - that._x, _y - that._y); }
 
     Pair operator* (Pair const& that) const
-    {
-        return Pair(_x * that._x, _y * that._y);
-    }
+    { return Pair(_x*  that._x, _y*  that._y); }
 
     Pair operator/ (Pair const& that) const
-    {
-        return Pair(_x / that._x, _y / that._y);
-    }
+    { return Pair(_x / that._x, _y / that._y); }
 
     template<typename numType>
     Pair operator* (numType const& number) const
-    {
-        return Pair(_x * number, _y * number);
-    }
+    { return Pair(_x*  number, _y*  number); }
 
     template<typename numType>
     Pair operator/ (numType const& number) const
-    {
-        return Pair(_x / number, _y / number);
-    }
+    { return Pair(_x / number, _y / number); }
 
     Type smaller()
-    {
-        return _x < _y ? _x : _y;
-    }
+    { return _x < _y ? _x : _y; }
 
     Type larger()
-    {
-        return _x > _y ? _x : _y;
-    }
+    { return _x > _y ? _x : _y; }
 
     static Pair<int> computeCenter(QRect const& rect)
     {
-        return Pair<int>((rect.left() + rect.right()) * 0.5,
-                         (rect.top() + rect.bottom()) * 0.5);
+        return Pair<int>((rect.left() + rect.right())*  0.5,
+                         (rect.top() + rect.bottom())*  0.5);
     }
 
 private:
@@ -100,22 +81,21 @@ public:
     }
 
 
-    double xMin() const {return _xMin;}
-    double yMin() const {return _yMin;}
-    double xMax() const {return _xMax;}
-    double yMax() const {return _yMax;}
+    double xMin() const { return _xMin; }
+    double yMin() const { return _yMin; }
+    double xMax() const { return _xMax; }
+    double yMax() const { return _yMax; }
 
-    double xRange() const {return _xMax - _xMin;}
-    double yRange() const {return _yMax - _yMin;}
+    double xRange() const { return _xMax - _xMin; }
+    double yRange() const { return _yMax - _yMin; }
 
-    double xCenter() const {return (_xMin + _xMax) * 0.5;}
-    double yCenter() const {return (_yMin + _yMax) * 0.5;}
+    double xCenter() const { return (_xMin + _xMax)*  0.5; }
+    double yCenter() const { return (_yMin + _yMax)*  0.5; }
 
 private:
     double _xMin, _yMin, _xMax, _yMax;
 
 };
-
 }
 
 #endif // SUPPORTS_H
