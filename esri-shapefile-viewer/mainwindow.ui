@@ -27,9 +27,19 @@
     <property name="title">
      <string>File</string>
     </property>
-    <addaction name="actionOpen"/>
+    <addaction name="actionOpen_Dataset"/>
+    <addaction name="actionClose_All"/>
+   </widget>
+   <widget class="QMenu" name="menuLayer">
+    <property name="title">
+     <string>Layer</string>
+    </property>
+    <addaction name="actionRemove_Layer"/>
+    <addaction name="actionLayer_Up"/>
+    <addaction name="actionLayer_Down"/>
    </widget>
    <addaction name="menuFile"/>
+   <addaction name="menuLayer"/>
   </widget>
   <widget class="QToolBar" name="mainToolBar">
    <attribute name="toolBarArea">
@@ -38,12 +48,36 @@
    <attribute name="toolBarBreak">
     <bool>false</bool>
    </attribute>
-   <addaction name="actionOpen"/>
+   <addaction name="actionOpen_Dataset"/>
+   <addaction name="actionClose_All"/>
+   <addaction name="actionRemove_Layer"/>
+   <addaction name="actionLayer_Up"/>
+   <addaction name="actionLayer_Down"/>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
-  <action name="actionOpen">
+  <action name="actionOpen_Dataset">
    <property name="text">
-    <string>Open</string>
+    <string>Open Dataset</string>
+   </property>
+  </action>
+  <action name="actionRemove_Layer">
+   <property name="text">
+    <string>Remove Layer</string>
+   </property>
+  </action>
+  <action name="actionLayer_Up">
+   <property name="text">
+    <string>Layer Up</string>
+   </property>
+  </action>
+  <action name="actionLayer_Down">
+   <property name="text">
+    <string>Layer Down</string>
+   </property>
+  </action>
+  <action name="actionClose_All">
+   <property name="text">
+    <string>Close All</string>
    </property>
   </action>
  </widget>

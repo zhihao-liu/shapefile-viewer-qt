@@ -9,7 +9,7 @@ class Bounds;
 
 namespace Dataset
 {
-class ShapeDatasetPtr;
+class ShapeDatasetShared;
 class ShapeDatasetRC;
 class ShapeRecordUnique;
 }

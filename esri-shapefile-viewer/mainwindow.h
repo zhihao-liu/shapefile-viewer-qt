@@ -2,7 +2,6 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
-#include <string>
 #include "viewform.h"
 #include "sidebar.h"
 #include "shapemanager.h"
@@ -22,9 +21,9 @@ public:
     explicit MainWindow(QWidget* parent = nullptr);
     ~MainWindow();
 
-    virtual void updateDisplay();
-    virtual QRect const paintingRect() const;
-    virtual void setLabel(QString const& msg);
+    virtual void updateDisplay() override;
+    virtual QRect const paintingRect() const override;
+    virtual void setLabel(QString const& msg) override;
 
 private:
     std::unique_ptr<Ui::MainWindow> ui;
@@ -34,7 +33,11 @@ private:
     std::unique_ptr<QLabel> _msgLabel;
 
 private slots:
-    void openFile();
+    void openDataset();
+    void closeAll();
+    void removeLayer();
+    void layerUp();
+    void layerDown();
 };
 
 #endif // MAINWINDOW_H

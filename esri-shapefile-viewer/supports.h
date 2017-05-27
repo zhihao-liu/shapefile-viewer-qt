@@ -17,8 +17,8 @@ public:
     Pair<T>(QPoint const& point)
         : _x(point.x()), _y(point.y()) {}
 
-    template<typename otherType>
-    Pair<T>(Pair<otherType> const& other)
+    template<typename U>
+    Pair<T>(Pair<U> const& other)
         : _x(other.x()), _y(other.y()) {}
 
     T const& x() const { return _x; }
@@ -38,12 +38,12 @@ public:
     Pair<T> operator/ (Pair const& other) const
     { return Pair(_x / other._x, _y / other._y); }
 
-    template<typename numType>
-    Pair<T> operator* (numType const& number) const
+    template<typename NumT>
+    Pair<T> operator* (NumT const& number) const
     { return Pair(_x*  number, _y*  number); }
 
-    template<typename numType>
-    Pair<T> operator/ (numType const& number) const
+    template<typename NumT>
+    Pair<T> operator/ (NumT const& number) const
     { return Pair(_x / number, _y / number); }
 
     T smaller()
