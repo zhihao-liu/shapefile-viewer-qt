@@ -3,54 +3,53 @@
 
 #include <QRect>
 #include <QPoint>
+#include "nsdef.h"
 
-namespace cl
-{
-template<typename Type>
-class Pair
+template<typename T>
+class cl::Pair
 {
 public:
-    Pair() {}
+    Pair<T>() {}
 
-    Pair(Type x, Type y)
+    Pair<T>(T x, T y)
         : _x(x), _y(y) {}
 
-    Pair(QPoint const& point)
+    Pair<T>(QPoint const& point)
         : _x(point.x()), _y(point.y()) {}
 
-    template<typename thatType>
-    Pair(Pair<thatType> const& that)
-        : _x(that.x()), _y(that.y()) {}
+    template<typename otherType>
+    Pair<T>(Pair<otherType> const& other)
+        : _x(other.x()), _y(other.y()) {}
 
-    Type const& x() const { return _x; }
-    Type const& y() const { return _y; }
+    T const& x() const { return _x; }
+    T const& y() const { return _y; }
 
     QPoint toPoint() const { return QPoint(_x, _y); }
 
-    Pair operator+ (Pair const& that) const
-    { return Pair(_x + that._x, _y + that._y); }
+    Pair<T> operator+ (Pair const& other) const
+    { return Pair(_x + other._x, _y + other._y); }
 
-    Pair operator- (Pair const& that) const
-    { return Pair(_x - that._x, _y - that._y); }
+    Pair<T> operator- (Pair const& other) const
+    { return Pair(_x - other._x, _y - other._y); }
 
-    Pair operator* (Pair const& that) const
-    { return Pair(_x*  that._x, _y*  that._y); }
+    Pair<T> operator* (Pair const& other) const
+    { return Pair(_x*  other._x, _y*  other._y); }
 
-    Pair operator/ (Pair const& that) const
-    { return Pair(_x / that._x, _y / that._y); }
+    Pair<T> operator/ (Pair const& other) const
+    { return Pair(_x / other._x, _y / other._y); }
 
     template<typename numType>
-    Pair operator* (numType const& number) const
+    Pair<T> operator* (numType const& number) const
     { return Pair(_x*  number, _y*  number); }
 
     template<typename numType>
-    Pair operator/ (numType const& number) const
+    Pair<T> operator/ (numType const& number) const
     { return Pair(_x / number, _y / number); }
 
-    Type smaller()
+    T smaller()
     { return _x < _y ? _x : _y; }
 
-    Type larger()
+    T larger()
     { return _x > _y ? _x : _y; }
 
     static Pair<int> computeCenter(QRect const& rect)
@@ -60,16 +59,16 @@ public:
     }
 
 private:
-    Type _x, _y;
+    T _x, _y;
 };
 
-class Bounds
+class cl::Bounds
 {
 public:
     Bounds() {}
     Bounds(double xMin, double yMin, double xMax, double yMax)
         : _xMin(xMin), _yMin(yMin), _xMax(xMax), _yMax(yMax) {}
-    Bounds(Pair<double> xyMin, Pair<double> xyMax)
+    Bounds(Pair<double> const& xyMin, Pair<double> const& xyMax)
         : _xMin(xyMin.x()), _yMin(xyMin.y()), _xMax(xyMax.x()), _yMax(xyMax.y()) {}
 
     void set(double const* xyMin, double const* xyMax)
@@ -96,6 +95,5 @@ private:
     double _xMin, _yMin, _xMax, _yMax;
 
 };
-}
 
 #endif // SUPPORTS_H

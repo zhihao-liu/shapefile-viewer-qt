@@ -7,9 +7,7 @@
 
 using namespace cl;
 
-namespace cl
-{
-class ShapePrivate
+class cl::Graphics::ShapePrivate
 {
     friend class Shape;
     friend class Point;
@@ -20,59 +18,58 @@ public:
     ~ShapePrivate() {}
 
 private:
-    ShapePrivate(Shape& refThis, ShapeDatasetSptr ptrDataset)
+    ShapePrivate(Shape& refThis, Dataset::ShapeDatasetSptr ptrDataset)
         : _refThis(refThis), _ptrDataset(ptrDataset),
           _borderColor(QColor::fromHsl(qrand()%360, qrand()%256, qrand()%200)),
           _fillColor(QColor::fromHsl(qrand()%360, qrand()%256, qrand()%256)) {}
 
     Shape& _refThis;
 
-    ShapeDatasetSptr _ptrDataset;
+    Dataset::ShapeDatasetSptr _ptrDataset;
     QColor _borderColor, _fillColor; // Each object has a different but fixed color set.
 };
-}
 
-Shape::~Shape() {}
+Graphics::Shape::~Shape() {}
 
-std::string const& Shape::name() const
+std::string const& Graphics::Shape::name() const
 {
     return _private->_ptrDataset->name();
 }
 
-Shape::Shape(ShapeDatasetSptr ptrDataset)
+Graphics::Shape::Shape(Dataset::ShapeDatasetSptr ptrDataset)
     : _private(std::unique_ptr<ShapePrivate>
                (new ShapePrivate(*this, ptrDataset))) {}
 
-std::unique_ptr<ShapeFactory> ShapeFactoryESRI::_instance = nullptr;
+std::unique_ptr<DataManagement::ShapeFactory> DataManagement::ShapeFactoryESRI::_instance = nullptr;
 
-ShapeFactory const& ShapeFactoryESRI::instance()
+DataManagement::ShapeFactory const& DataManagement::ShapeFactoryESRI::instance()
 {
     if (_instance == nullptr)
         _instance.reset(new ShapeFactoryESRI());
     return *_instance;
 }
 
-std::shared_ptr<Shape> ShapeFactoryESRI::createShape(std::string const& path) const
+std::shared_ptr<Graphics::Shape> DataManagement::ShapeFactoryESRI::createShape(std::string const& path) const
 {
-    ShapeDatasetSptr ptrDataset(path);
+    Dataset::ShapeDatasetSptr ptrDataset(path);
     switch (ptrDataset->type())
     {
     case SHPT_POINT:
     case SHPT_POINTZ:
     case SHPT_POINTM:
-        return std::shared_ptr<Shape>(new Point(ptrDataset));
+        return std::shared_ptr<Graphics::Shape>(new Graphics::Point(ptrDataset));
         break;
 
     case SHPT_ARC:
     case SHPT_ARCZ:
     case SHPT_ARCM:
-        return std::shared_ptr<Shape>(new Polyline(ptrDataset));
+        return std::shared_ptr<Graphics::Shape>(new Graphics::Polyline(ptrDataset));
         break;
 
     case SHPT_POLYGON:
     case SHPT_POLYGONZ:
     case SHPT_POLYGONM:
-        return std::shared_ptr<Shape>(new Polygon(ptrDataset));
+        return std::shared_ptr<Graphics::Shape>(new Graphics::Polygon(ptrDataset));
         break;
     default:
         return nullptr;
@@ -80,7 +77,7 @@ std::shared_ptr<Shape> ShapeFactoryESRI::createShape(std::string const& path) co
     }
 }
 
-int Point::draw(QPainter& painter, GraphicAssistant const& assistant) const
+int Graphics::Point::draw(QPainter& painter, GraphicAssistant const& assistant) const
 {
     Bounds mapHitBounds = assistant.computeMapHitBounds();
     std::vector<int> recordsHit = _private->_ptrDataset->filterRecords(mapHitBounds);
@@ -88,10 +85,9 @@ int Point::draw(QPainter& painter, GraphicAssistant const& assistant) const
     painter.setPen(QPen(_private->_borderColor));
     painter.setBrush(QBrush(_private->_fillColor));
 
-    for (std::vector<int>::iterator itr = recordsHit.begin();
-         itr < recordsHit.end(); ++itr)
+    for (auto item : recordsHit)
     {
-        ShapeRecordUnique ptrRecord = _private->_ptrDataset->readRecord(*itr);
+        Dataset::ShapeRecordUnique ptrRecord = _private->_ptrDataset->readRecord(item);
         QPoint point = assistant.computePointOnDisplay(*ptrRecord, 0);
 
         int const r = 5;
@@ -102,7 +98,7 @@ int Point::draw(QPainter& painter, GraphicAssistant const& assistant) const
     return recordsHit.size();
 }
 
-int Polyline::draw(QPainter& painter, GraphicAssistant const& assistant) const
+int Graphics::Polyline::draw(QPainter& painter, GraphicAssistant const& assistant) const
 {
     Bounds mapHitBounds = assistant.computeMapHitBounds();
     std::vector<int> recordsHit = _private->_ptrDataset->filterRecords(mapHitBounds);
@@ -110,10 +106,9 @@ int Polyline::draw(QPainter& painter, GraphicAssistant const& assistant) const
     painter.setPen(QPen(_private->_borderColor));
     painter.setBrush(QBrush(_private->_fillColor));
 
-    for (std::vector<int>::iterator itr = recordsHit.begin();
-         itr < recordsHit.end(); ++itr)
+    for (auto item : recordsHit)
     {
-        ShapeRecordUnique ptrRecord = _private->_ptrDataset->readRecord(*itr);
+        Dataset::ShapeRecordUnique ptrRecord = _private->_ptrDataset->readRecord(item);
         ptrRecord->panPartStart[ptrRecord->nParts] = ptrRecord->nVertices;
 
         for (int partIndex = 0; partIndex < ptrRecord->nParts; ++partIndex)
@@ -132,7 +127,7 @@ int Polyline::draw(QPainter& painter, GraphicAssistant const& assistant) const
     return recordsHit.size();
 }
 
-int Polygon::draw(QPainter& painter, GraphicAssistant const& assistant) const
+int Graphics::Polygon::draw(QPainter& painter, GraphicAssistant const& assistant) const
 {
     Bounds mapHitBounds = assistant.computeMapHitBounds();
     std::vector<int> recordsHit = _private->_ptrDataset->filterRecords(mapHitBounds);
@@ -140,10 +135,9 @@ int Polygon::draw(QPainter& painter, GraphicAssistant const& assistant) const
     painter.setPen(QPen(_private->_borderColor));
     painter.setBrush(QBrush(_private->_fillColor));
 
-    for (std::vector<int>::iterator itr = recordsHit.begin();
-         itr < recordsHit.end(); ++itr)
+    for (auto item : recordsHit)
     {
-        ShapeRecordUnique ptrRecord = _private->_ptrDataset->readRecord(*itr);
+        Dataset::ShapeRecordUnique ptrRecord = _private->_ptrDataset->readRecord(item);
         ptrRecord->panPartStart[ptrRecord->nParts] = ptrRecord->nVertices;
 
         for (int partIndex = 0; partIndex < ptrRecord->nParts; ++partIndex)
@@ -162,12 +156,12 @@ int Polygon::draw(QPainter& painter, GraphicAssistant const& assistant) const
     return recordsHit.size();
 }
 
-int Shape::recordCount() const
+int Graphics::Shape::recordCount() const
 {
     return _private->_ptrDataset->recordCount();
 }
 
-ShapeDatasetRC::ShapeDatasetRC(std::string const& path)
+Dataset::ShapeDatasetRC::ShapeDatasetRC(std::string const& path)
     : _shpHandle(nullptr), _shpTree(nullptr), _refCount(1)
 {
     _shpHandle = SHPOpen(path.c_str(), "rb+");
@@ -180,11 +174,11 @@ ShapeDatasetRC::ShapeDatasetRC(std::string const& path)
     _bounds.set(_shpHandle->adBoundsMin, _shpHandle->adBoundsMax);
 }
 
-Bounds const& Shape::bounds() const
+Bounds const& Graphics::Shape::bounds() const
 {
     return _private->_ptrDataset->bounds();
 }
-ShapeDatasetRC::~ShapeDatasetRC()
+Dataset::ShapeDatasetRC::~ShapeDatasetRC()
 {
     if(_shpHandle)
     {
@@ -199,25 +193,25 @@ ShapeDatasetRC::~ShapeDatasetRC()
     }
 }
 
-ShapeDatasetRC* ShapeDatasetRC::addRef()
+Dataset::ShapeDatasetRC* Dataset::ShapeDatasetRC::addRef()
 {
     ++_refCount;
     return this;
 }
 
-ShapeDatasetSptr::ShapeDatasetSptr(std::string const& path)
+Dataset::ShapeDatasetSptr::ShapeDatasetSptr(std::string const& path)
 {
     _raw = new ShapeDatasetRC(path);
 }
 
-ShapeDatasetSptr::ShapeDatasetSptr(ShapeDatasetRC* shapeDataset)
+Dataset::ShapeDatasetSptr::ShapeDatasetSptr(ShapeDatasetRC* shapeDataset)
     : _raw(shapeDataset) {}
 
 
-ShapeDatasetSptr::ShapeDatasetSptr(ShapeDatasetSptr const& rhs)
+Dataset::ShapeDatasetSptr::ShapeDatasetSptr(ShapeDatasetSptr const& rhs)
     : _raw(rhs._raw->addRef()) {}
 
-ShapeDatasetSptr& ShapeDatasetSptr::operator= (ShapeDatasetSptr const& rhs)
+Dataset::ShapeDatasetSptr& Dataset::ShapeDatasetSptr::operator= (ShapeDatasetSptr const& rhs)
 {
     if(this == &rhs)
         return *this;
@@ -250,13 +244,13 @@ ShapeDatasetSptr& ShapeDatasetSptr::operator= (ShapeDatasetSptr const& rhs)
 //    return *this;
 //}
 
-ShapeDatasetSptr::~ShapeDatasetSptr()
+Dataset::ShapeDatasetSptr::~ShapeDatasetSptr()
 {
     if(_raw && --_raw->_refCount == 0)
         delete _raw;
 }
 
-std::vector<int> const ShapeDatasetRC::filterRecords(Bounds const& mapHitBounds) const
+std::vector<int> const Dataset::ShapeDatasetRC::filterRecords(Bounds const& mapHitBounds) const
 {
     double mapHitBoundsMin[2] = {mapHitBounds.xMin(), mapHitBounds.yMin()};
     double mapHitBoundsMax[2] = {mapHitBounds.xMax(), mapHitBounds.yMax()};
@@ -271,29 +265,29 @@ std::vector<int> const ShapeDatasetRC::filterRecords(Bounds const& mapHitBounds)
     return recordsHit;
 }
 
-ShapeRecordUnique::~ShapeRecordUnique()
+Dataset::ShapeRecordUnique::~ShapeRecordUnique()
 {
     if(_raw)
         SHPDestroyObject(_raw);
 }
 
-ShapeRecordUnique::ShapeRecordUnique(ShapeDatasetRC const& dataset, int index)
+Dataset::ShapeRecordUnique::ShapeRecordUnique(ShapeDatasetRC const& dataset, int index)
     : _raw(SHPReadObject(dataset.handle(), index)) {}
 
-ShapeRecordUnique::ShapeRecordUnique(ShapeRecordUnique&& rhs)
+Dataset::ShapeRecordUnique::ShapeRecordUnique(ShapeRecordUnique&& rhs)
 {
     _raw = rhs._raw;
     rhs._raw = nullptr;
 }
 
-ShapeRecordUnique& ShapeRecordUnique::operator= (ShapeRecordUnique&& rhs)
+Dataset::ShapeRecordUnique& Dataset::ShapeRecordUnique::operator= (ShapeRecordUnique&& rhs)
 {
     _raw = rhs._raw;
     rhs._raw = nullptr;
     return *this;
 }
 
-ShapeRecordUnique ShapeDatasetRC::readRecord(int index) const
+Dataset::ShapeRecordUnique Dataset::ShapeDatasetRC::readRecord(int index) const
 {
     return ShapeRecordUnique(*this, index);
 }

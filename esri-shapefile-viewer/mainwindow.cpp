@@ -25,7 +25,7 @@ MainWindow::MainWindow(QWidget* parent)
     statusBar()->addWidget(_msgLabel.get());
 
     // Bind the singleton dataset with this form as its observer.
-    cl::ShapeManager::data().setObserver(*this);
+    cl::DataManagement::ShapeManager::data().setObserver(*this);
 
     // Connect the open file signal.
     connect(ui->actionOpen, SIGNAL(triggered(bool)), this, SLOT(openFile()));
@@ -48,7 +48,7 @@ void MainWindow::openFile()
     QString qsPath = fileNames.at(0);
     std::string sPath = qsPath.toStdString();
 
-    cl::ShapeManager::data().addShape(sPath);
+    cl::DataManagement::ShapeManager::data().addShape(sPath);
 }
 
 void MainWindow::updateDisplay()

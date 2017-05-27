@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include "../shapelib/shapefil.h"
+#include "nsdef.h"
 #include "supports.h"
 
 class MainWindow;
@@ -14,12 +15,7 @@ class QTime;
 class QPoint;
 class QString;
 
-namespace cl
-{
-class GraphicAssistant;
-class Shape;
-
-class ShapeDocsObserver
+class cl::DataManagement::ShapeDocsObserver
 {
 public:
     virtual void updateDisplay() = 0;
@@ -30,12 +26,11 @@ protected:
     ShapeDocsObserver() {}
 };
 
-class ShapeDocsPrivate;
-class ShapeDocs
+class cl::DataManagement::ShapeDocs
 {
 public:
     ShapeDocs();
-    GraphicAssistant& assistant() const;
+    Graphics::GraphicAssistant& assistant() const;
     void setObserver(ShapeDocsObserver& observer);
     void refresh() const;
     bool isEmpty() const;
@@ -44,7 +39,7 @@ public:
     void drawAllShapes(QPainter& painter) const;
     void clear();
     std::string const& nameOf(int index) const;
-    std::shared_ptr<Shape const> findByName(std::string const& name) const;
+    std::shared_ptr<Graphics::Shape const> findByName(std::string const& name) const;
     int listSize() const;
     Bounds computeGlobalBounds() const;
 
@@ -52,7 +47,7 @@ private:
     std::unique_ptr<ShapeDocsPrivate> _private;
 };
 
-class ShapeManager
+class cl::DataManagement::ShapeManager
 {
 public:
     static ShapeDocs& data();
@@ -61,14 +56,13 @@ private:
     static std::unique_ptr<ShapeDocs> _data;
 };
 
-class GraphicAssistantPrivate;
-class GraphicAssistant
+class cl::Graphics::GraphicAssistant
 {
 public:
-    GraphicAssistant(ShapeDocs const& refDocs);
+    GraphicAssistant(DataManagement::ShapeDocs const& refDocs);
     void setPainterRect(QRect const& paintingRect);
-    Pair<int> mapToDisplayXY(Pair<double> mapXY) const;
-    Pair<double> displayToMapXY(Pair<int> displayXY) const;
+    Pair<int> mapToDisplayXY(Pair<double> const& mapXY) const;
+    Pair<double> displayToMapXY(Pair<int> const& displayXY) const;
     QPoint computePointOnDisplay(SHPObject const& record, int ptIndex) const;
     Bounds computeMapHitBounds() const;
     void zoomToAll();
@@ -80,6 +74,5 @@ public:
 private:
     std::unique_ptr<GraphicAssistantPrivate> _private;
 };
-}
 
 #endif // SHAPEMANAGER_H
