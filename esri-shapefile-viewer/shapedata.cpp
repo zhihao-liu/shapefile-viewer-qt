@@ -11,6 +11,7 @@ class cl::Graphics::ShapePrivate
 {
     friend class Shape;
     friend class Point;
+    friend class MultiPartShape;
     friend class Polyline;
     friend class Polygon;
 
@@ -27,6 +28,32 @@ private:
 
     Dataset::ShapeDatasetShared _ptrDataset;
     QColor _borderColor, _fillColor; // Each object has a different but fixed color set.
+};
+
+class cl::Dataset::ShapeDatasetShared::ShapeDatasetRC
+{
+    friend class ShapeDatasetShared;
+
+public:
+    ShapeDatasetRC(std::string const& path);
+    ~ShapeDatasetRC();
+
+    int type () const { return _shpHandle->nShapeType; }
+    SHPHandle const& handle() const { return _shpHandle; }
+    SHPTree const& tree() const { return *_shpTree; }
+    int recordCount() const { return _shpHandle->nRecords;}
+    Bounds const& bounds() const { return _bounds; }
+    std::string const& name() const { return _name; }
+    std::vector<int> const filterRecords(Bounds const& mapHitBounds) const;
+
+private:
+    SHPHandle _shpHandle;
+    SHPTree* _shpTree;
+    int _refCount;
+    std::string _name;
+    Bounds _bounds;
+
+    ShapeDatasetRC* addRef();
 };
 
 Graphics::Shape::~Shape() {}
@@ -87,7 +114,7 @@ int Graphics::Point::draw(QPainter& painter, GraphicAssistant const& assistant) 
 
     for (auto item : recordsHit)
     {
-        Dataset::ShapeRecordUnique ptrRecord = _private->_ptrDataset->readRecord(item);
+        Dataset::ShapeRecordUnique ptrRecord = _private->_ptrDataset.readRecord(item);
         QPoint point = assistant.computePointOnDisplay(*ptrRecord, 0);
 
         int const r = 5;
@@ -98,7 +125,7 @@ int Graphics::Point::draw(QPainter& painter, GraphicAssistant const& assistant) 
     return recordsHit.size();
 }
 
-int Graphics::Polyline::draw(QPainter& painter, GraphicAssistant const& assistant) const
+int Graphics::MultiPartShape::draw(QPainter& painter, GraphicAssistant const& assistant) const
 {
     Bounds mapHitBounds = assistant.computeMapHitBounds();
     std::vector<int> recordsHit = _private->_ptrDataset->filterRecords(mapHitBounds);
@@ -108,60 +135,42 @@ int Graphics::Polyline::draw(QPainter& painter, GraphicAssistant const& assistan
 
     for (auto item : recordsHit)
     {
-        Dataset::ShapeRecordUnique ptrRecord = _private->_ptrDataset->readRecord(item);
+        Dataset::ShapeRecordUnique ptrRecord = _private->_ptrDataset.readRecord(item);
         ptrRecord->panPartStart[ptrRecord->nParts] = ptrRecord->nVertices;
 
         for (int partIndex = 0; partIndex < ptrRecord->nParts; ++partIndex)
         {
-            int nPartVertices = ptrRecord->panPartStart[partIndex+1] - ptrRecord->panPartStart[partIndex];
+            int nPartVertices = ptrRecord->panPartStart[partIndex + 1] - ptrRecord->panPartStart[partIndex];
             QPoint partVertices[nPartVertices];
 
             int count = 0;
-            for (int vtxIndex = ptrRecord->panPartStart[partIndex]; vtxIndex < ptrRecord->panPartStart[partIndex+1]; ++vtxIndex)
+            for (int vtxIndex = ptrRecord->panPartStart[partIndex]; vtxIndex < ptrRecord->panPartStart[partIndex + 1]; ++vtxIndex)
                 partVertices[count++] = assistant.computePointOnDisplay(*ptrRecord, vtxIndex);
 
-            painter.drawPolyline(partVertices, nPartVertices);
+            drawPart(painter, partVertices, nPartVertices);
         }
     }
 
     return recordsHit.size();
 }
 
-int Graphics::Polygon::draw(QPainter& painter, GraphicAssistant const& assistant) const
+void Graphics::Polyline::drawPart(QPainter& painter, QPoint const* points, int pointCount) const
 {
-    Bounds mapHitBounds = assistant.computeMapHitBounds();
-    std::vector<int> recordsHit = _private->_ptrDataset->filterRecords(mapHitBounds);
-
-    painter.setPen(QPen(_private->_borderColor));
-    painter.setBrush(QBrush(_private->_fillColor));
-
-    for (auto item : recordsHit)
-    {
-        Dataset::ShapeRecordUnique ptrRecord = _private->_ptrDataset->readRecord(item);
-        ptrRecord->panPartStart[ptrRecord->nParts] = ptrRecord->nVertices;
-
-        for (int partIndex = 0; partIndex < ptrRecord->nParts; ++partIndex)
-        {
-            int nPartVertices = ptrRecord->panPartStart[partIndex+1] - ptrRecord->panPartStart[partIndex];
-            QPoint partVertices[nPartVertices];
-
-            int count = 0;
-            for (int vtxIndex = ptrRecord->panPartStart[partIndex]; vtxIndex < ptrRecord->panPartStart[partIndex+1]; ++vtxIndex)
-                partVertices[count++] = assistant.computePointOnDisplay(*ptrRecord, vtxIndex);
-
-            painter.drawPolygon(partVertices, nPartVertices);
-        }
-    }
-
-    return recordsHit.size();
+    painter.drawPolyline(points, pointCount);
 }
+
+void Graphics::Polygon::drawPart(QPainter& painter, QPoint const* points, int pointCount) const
+{
+    painter.drawPolyline(points, pointCount);
+}
+
 
 int Graphics::Shape::recordCount() const
 {
     return _private->_ptrDataset->recordCount();
 }
 
-Dataset::ShapeDatasetRC::ShapeDatasetRC(std::string const& path)
+Dataset::ShapeDatasetShared::ShapeDatasetRC::ShapeDatasetRC(std::string const& path)
     : _shpHandle(nullptr), _shpTree(nullptr), _refCount(1)
 {
     _shpHandle = SHPOpen(path.c_str(), "rb+");
@@ -178,7 +187,7 @@ Bounds const& Graphics::Shape::bounds() const
 {
     return _private->_ptrDataset->bounds();
 }
-Dataset::ShapeDatasetRC::~ShapeDatasetRC()
+Dataset::ShapeDatasetShared::ShapeDatasetRC::~ShapeDatasetRC()
 {
     if(_shpHandle)
     {
@@ -193,7 +202,7 @@ Dataset::ShapeDatasetRC::~ShapeDatasetRC()
     }
 }
 
-Dataset::ShapeDatasetRC* Dataset::ShapeDatasetRC::addRef()
+Dataset::ShapeDatasetShared::ShapeDatasetRC* Dataset::ShapeDatasetShared::ShapeDatasetRC::addRef()
 {
     ++_refCount;
     return this;
@@ -250,7 +259,7 @@ Dataset::ShapeDatasetShared::~ShapeDatasetShared()
         delete _raw;
 }
 
-std::vector<int> const Dataset::ShapeDatasetRC::filterRecords(Bounds const& mapHitBounds) const
+std::vector<int> const Dataset::ShapeDatasetShared::ShapeDatasetRC::filterRecords(Bounds const& mapHitBounds) const
 {
     double mapHitBoundsMin[2] = {mapHitBounds.xMin(), mapHitBounds.yMin()};
     double mapHitBoundsMax[2] = {mapHitBounds.xMax(), mapHitBounds.yMax()};
@@ -271,8 +280,8 @@ Dataset::ShapeRecordUnique::~ShapeRecordUnique()
         SHPDestroyObject(_raw);
 }
 
-Dataset::ShapeRecordUnique::ShapeRecordUnique(ShapeDatasetRC const& dataset, int index)
-    : _raw(SHPReadObject(dataset.handle(), index)) {}
+Dataset::ShapeRecordUnique::ShapeRecordUnique(ShapeDatasetShared const& ptrDataset, int index)
+    : _raw(SHPReadObject(ptrDataset->handle(), index)) {}
 
 Dataset::ShapeRecordUnique::ShapeRecordUnique(ShapeRecordUnique&& rhs)
 {
@@ -287,7 +296,7 @@ Dataset::ShapeRecordUnique& Dataset::ShapeRecordUnique::operator= (ShapeRecordUn
     return *this;
 }
 
-Dataset::ShapeRecordUnique Dataset::ShapeDatasetRC::readRecord(int index) const
+Dataset::ShapeRecordUnique Dataset::ShapeDatasetShared::readRecord(int index) const
 {
     return ShapeRecordUnique(*this, index);
 }

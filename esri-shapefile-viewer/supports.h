@@ -3,6 +3,7 @@
 
 #include <QRect>
 #include <QPoint>
+#include <QPainter>
 #include "nsdef.h"
 
 template<typename T>
@@ -93,7 +94,6 @@ public:
 
 private:
     double _xMin, _yMin, _xMax, _yMax;
-
 };
 
 #endif // SUPPORTS_H
