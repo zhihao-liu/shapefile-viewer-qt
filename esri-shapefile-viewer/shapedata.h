@@ -4,18 +4,14 @@
 #include <memory>
 #include <string>
 #include "../shapelib/shapefil.h"
+#include "nsdef.h"
 #include "supports.h"
 
 class QPoint;
 class QPainter;
 class QColor;
 
-namespace cl
-{
-class GraphicAssistant;
-class ShapeDatasetRC;
-
-class ShapeRecordUnique
+class cl::Dataset::ShapeRecordUnique
 {
 public:
     ShapeRecordUnique() : _raw(nullptr) {}
@@ -37,7 +33,7 @@ private:
     SHPObject* _raw;
 };
 
-class ShapeDatasetRC
+class cl::Dataset::ShapeDatasetRC
 {
     friend class ShapeDatasetSptr;
 
@@ -64,7 +60,7 @@ private:
     ShapeDatasetRC* addRef();
 };
 
-class ShapeDatasetSptr
+class cl::Dataset::ShapeDatasetSptr
 {
 public:
     ShapeDatasetSptr() : _raw(nullptr) {}
@@ -85,8 +81,7 @@ private:
     ShapeDatasetRC* _raw;
 };
 
-class ShapePrivate;
-class Shape
+class cl::Graphics::Shape
 {
 public:
     virtual ~Shape();
@@ -98,58 +93,56 @@ public:
     virtual int draw(QPainter& painter, GraphicAssistant const& assistant) const = 0;
 
 protected:
-    Shape(ShapeDatasetSptr ptrDataset);
+    Shape(Dataset::ShapeDatasetSptr ptrDataset);
     std::unique_ptr<ShapePrivate> _private;
 };
 
-class Point: public Shape
+class cl::Graphics::Point: public Shape
 {
 public:
-    Point(ShapeDatasetSptr ptrDataset): Shape(ptrDataset) {}
+    Point(Dataset::ShapeDatasetSptr ptrDataset): Shape(ptrDataset) {}
     virtual ~Point() {}
     virtual int draw(QPainter& painter, GraphicAssistant const& assistant) const;
 };
 
-class Polyline: public Shape
+class cl::Graphics::Polyline: public Shape
 {
 public:
-    Polyline(ShapeDatasetSptr ptrDataset): Shape(ptrDataset) {}
+    Polyline(Dataset::ShapeDatasetSptr ptrDataset): Shape(ptrDataset) {}
     virtual ~Polyline() {}
     virtual int draw(QPainter& painter, GraphicAssistant const& assistant) const;
 };
 
-class Polygon: public Shape
+class cl::Graphics::Polygon: public Shape
 {
 public:
-    Polygon(ShapeDatasetSptr ptrDataset): Shape(ptrDataset) {}
+    Polygon(Dataset::ShapeDatasetSptr ptrDataset): Shape(ptrDataset) {}
     virtual ~Polygon() {}
     virtual int draw(QPainter& painter, GraphicAssistant const& assistant) const;
 };
 
-enum SHAPE_PROVIDER
-{ESRI = 0, AUTODESK, OTHERS};
+enum class ShapeProvider { ESRI = 0, AUTODESK, OTHERS };
 
-class ShapeFactory
+class cl::DataManagement::ShapeFactory
 {
 public:
     virtual ~ShapeFactory() {}
-    virtual std::shared_ptr<Shape> createShape(std::string const& path) const = 0;
+    virtual std::shared_ptr<Graphics::Shape> createShape(std::string const& path) const = 0;
 
 protected:
     ShapeFactory() {}
 };
 
-class ShapeFactoryESRI: ShapeFactory
+class cl::DataManagement::ShapeFactoryESRI: ShapeFactory
 {
 public:
     virtual ~ShapeFactoryESRI() {}
-    virtual std::shared_ptr<Shape> createShape(std::string const& path) const;
+    virtual std::shared_ptr<Graphics::Shape> createShape(std::string const& path) const;
     static ShapeFactory const& instance();
 
 private:
     ShapeFactoryESRI() {}
     static std::unique_ptr<ShapeFactory> _instance;
 };
-}
 
 #endif // SHAPEDATA_H

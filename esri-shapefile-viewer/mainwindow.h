@@ -14,7 +14,7 @@ namespace Ui
 class MainWindow;
 }
 
-class MainWindow : public QMainWindow, public cl::ShapeDocsObserver
+class MainWindow : public QMainWindow, public cl::DataManagement::ShapeDocsObserver
 {
     Q_OBJECT
 

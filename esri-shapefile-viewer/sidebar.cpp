@@ -20,9 +20,9 @@ void Sidebar::updateList()
 {
     ui->listWidget->clear();
 
-    for (int i = 0; i < int(cl::ShapeManager::data().listSize()); ++i)
+    for (int i = 0; i < int(cl::DataManagement::ShapeManager::data().listSize()); ++i)
     {
-        QString name = QString::fromStdString(cl::ShapeManager::data().nameOf(i));
+        QString name = QString::fromStdString(cl::DataManagement::ShapeManager::data().nameOf(i));
 
         ui->listWidget->insertItem(i, name);
     }
@@ -32,10 +32,11 @@ void Sidebar::updateList()
 void Sidebar::doubleClickItem(QListWidgetItem* itemClicked)
 {
     QString layerName = itemClicked->text();
-    std::shared_ptr<cl::Shape const> layer = cl::ShapeManager::data().findByName(layerName.toStdString());
+    std::shared_ptr<cl::Graphics::Shape const> layer =
+            cl::DataManagement::ShapeManager::data().findByName(layerName.toStdString());
     if (layer == nullptr)
         return;
 
-    cl::ShapeManager::data().assistant().zoomToLayer(*layer);
-    cl::ShapeManager::data().refresh();
+    cl::DataManagement::ShapeManager::data().assistant().zoomToLayer(*layer);
+    cl::DataManagement::ShapeManager::data().refresh();
 }

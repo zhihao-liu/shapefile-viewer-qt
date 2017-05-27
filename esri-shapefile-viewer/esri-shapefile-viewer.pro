@@ -40,7 +40,8 @@ HEADERS  += mainwindow.h \
     viewform.h \
     supports.h \
     shapedata.h \
-    shapemanager.h
+    shapemanager.h \
+    nsdef.h
 
 FORMS    += mainwindow.ui \
     viewform.ui \

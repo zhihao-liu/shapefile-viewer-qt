@@ -20,7 +20,7 @@ void ViewForm::paintEvent(QPaintEvent*)
     painter.begin(this);
     painter.setRenderHint(QPainter::Antialiasing);
 
-    cl::ShapeManager::data().drawAllShapes(painter);
+    cl::DataManagement::ShapeManager::data().drawAllShapes(painter);
 
     painter.end();
 
@@ -33,20 +33,20 @@ void ViewForm::wheelEvent(QWheelEvent* event)
     // Zoom in once everytime the wheel turns 90 degrees.
     float scaleFactor = 1 + (float(event->delta()) / 8 / 90);
 
-    cl::ShapeManager::data().assistant().zoomAtCursor(mousePos, scaleFactor);
-    cl::ShapeManager::data().refresh();
+    cl::DataManagement::ShapeManager::data().assistant().zoomAtCursor(mousePos, scaleFactor);
+    cl::DataManagement::ShapeManager::data().refresh();
 }
 
 void ViewForm::mouseDoubleClickEvent(QMouseEvent*)
 {
-    cl::ShapeManager::data().assistant().zoomToAll();
-    cl::ShapeManager::data().refresh();
+    cl::DataManagement::ShapeManager::data().assistant().zoomToAll();
+    cl::DataManagement::ShapeManager::data().refresh();
 }
 
 void ViewForm::mousePressEvent(QMouseEvent* event)
 {
     _mouseDragging = true;
-    cl::ShapeManager::data().assistant().moveStart(event->pos());
+    cl::DataManagement::ShapeManager::data().assistant().moveStart(event->pos());
 }
 
 void ViewForm::mouseReleaseEvent(QMouseEvent*)
@@ -58,7 +58,7 @@ void ViewForm::mouseMoveEvent(QMouseEvent* event)
 {
     if (_mouseDragging)
     {
-        cl::ShapeManager::data().assistant().moveProcessing(event->pos());
-        cl::ShapeManager::data().refresh();
+        cl::DataManagement::ShapeManager::data().assistant().moveProcessing(event->pos());
+        cl::DataManagement::ShapeManager::data().refresh();
     }
 }
