@@ -1,9 +1,10 @@
 #ifndef SHAPEMANAGER_H
 #define SHAPEMANAGER_H
 
-#include <memory>
 #include <string>
+#include <memory>
 #include <vector>
+#include <list>
 #include "../shapelib/shapefil.h"
 #include "nsdef.h"
 #include "supports.h"
@@ -29,17 +30,22 @@ protected:
 class cl::DataManagement::ShapeDocs
 {
 public:
+    typedef std::list<std::shared_ptr<Graphics::Shape const>>::iterator LayerIterator;
+
     ShapeDocs();
     Graphics::GraphicAssistant& assistant() const;
     void setObserver(ShapeDocsObserver& observer);
     void refresh() const;
     bool isEmpty() const;
-    bool addShape(std::string const& path);
-    void removeShape(std::string const& name);
-    void drawAllShapes(QPainter& painter) const;
+    bool addLayer(std::string const& path);
+    void removeLayer(LayerIterator layerItr);
+    void rearrangeLayer(LayerIterator fromItr, LayerIterator toItr);
+    void clearAllLayers();
+    void paintAllLayers(QPainter& painter) const;
     void clear();
-    std::string const& nameOf(int index) const;
-    std::shared_ptr<Graphics::Shape const> findByName(std::string const& name) const;
+    std::vector<std::string const*> rawNameList() const;
+    LayerIterator findByName(std::string const& name) const;
+    bool layerNotFound(LayerIterator layerItr) const;
     int listSize() const;
     Bounds computeGlobalBounds() const;
 
@@ -66,10 +72,10 @@ public:
     QPoint computePointOnDisplay(SHPObject const& record, int ptIndex) const;
     Bounds computeMapHitBounds() const;
     void zoomToAll();
-    void zoomToLayer(Shape const& layer);
+    void zoomToLayer(DataManagement::ShapeDocs::LayerIterator layerItr);
     void zoomAtCursor(QPoint const& mousePos, float scaleFactor);
-    void moveStart(QPoint const& startPos);
-    void moveProcessing(QPoint const& currentPos);
+    void translationStart(QPoint const& startPos);
+    void translationProcessing(QPoint const& currentPos);
 
 private:
     std::unique_ptr<GraphicAssistantPrivate> _private;

@@ -6,7 +6,7 @@
 #include "shapedata.h"
 
 #define COVER 0.9
-#define EPS 1e-4
+#define EPS 1E-4
 
 using namespace cl;
 
@@ -20,7 +20,7 @@ private:
 
     ShapeDocs& _refThis;
 
-    std::vector<std::shared_ptr<Graphics::Shape>> _shpList;
+    std::list<std::shared_ptr<Graphics::Shape const>> _layerList;
     Graphics::GraphicAssistant _assistant;
     ShapeDocsObserver* _rawObserver;
 };
@@ -51,7 +51,7 @@ void DataManagement::ShapeDocs::setObserver(ShapeDocsObserver& observer)
     _private->_rawObserver =& observer;
 }
 
-void DataManagement::ShapeDocs::drawAllShapes(QPainter& painter) const
+void DataManagement::ShapeDocs::paintAllLayers(QPainter& painter) const
 {
     //    if (isEmpty())
     //        return;
@@ -61,7 +61,7 @@ void DataManagement::ShapeDocs::drawAllShapes(QPainter& painter) const
 
     int countRecordsHit = 0;
     int countRecordsTotal = 0;
-    for (auto item : _private->_shpList)
+    for (auto const& item : _private->_layerList)
     {
         countRecordsHit += item->draw(painter, _private->_assistant);
         countRecordsTotal += item->recordCount();
@@ -78,29 +78,39 @@ void DataManagement::ShapeDocs::drawAllShapes(QPainter& painter) const
                                      "\t\t Percentage Hit: " + msgPercentage +"%");
 }
 
-bool DataManagement::ShapeDocs::addShape(std::string const& path)
+bool DataManagement::ShapeDocs::addLayer(std::string const& path)
 {
     std::shared_ptr<Graphics::Shape> shp = ShapeFactoryESRI::instance().createShape(path);
     if (!shp)
         return false;
 
-    _private->_shpList.push_back(shp);
-    if (_private->_shpList.size() == 1)
-        _private->_assistant.zoomToLayer(*shp);
+    _private->_layerList.push_back(shp);
+    if (_private->_layerList.size() == 1)
+        _private->_assistant.zoomToLayer(_private->_layerList.begin());
+
     refresh();
     return true;
 }
 
-void DataManagement::ShapeDocs::removeShape(std::string const& name)
+void DataManagement::ShapeDocs::removeLayer(LayerIterator layerItr)
 {
-    for (auto itr = _private->_shpList.begin(); itr < _private->_shpList.end(); ++itr)
-    {
-        if ((*itr)->name() == name)
-        {
-            _private->_shpList.erase(itr);
-            break;
-        }
-    }
+    _private->_layerList.erase(layerItr);
+
+    refresh();
+}
+
+void DataManagement::ShapeDocs::rearrangeLayer(LayerIterator fromItr, LayerIterator toItr)
+{
+    _private->_layerList.insert(toItr, *fromItr);
+    _private->_layerList.erase(fromItr);
+
+    refresh();
+}
+
+void DataManagement::ShapeDocs::clearAllLayers()
+{
+    _private->_layerList.clear();
+
     refresh();
 }
 
@@ -111,7 +121,7 @@ void DataManagement::ShapeDocs::refresh() const
 
 void DataManagement::ShapeDocs::clear()
 {
-    _private->_shpList.clear();
+    _private->_layerList.clear();
 }
 
 std::unique_ptr<DataManagement::ShapeDocs> DataManagement::ShapeManager::_data = nullptr;
@@ -125,17 +135,12 @@ DataManagement::ShapeDocs& DataManagement::ShapeManager::data()
 
 bool DataManagement::ShapeDocs::isEmpty() const
 {
-    return _private->_shpList.size() == 0 ? true : false;
-}
-
-std::string const& DataManagement::ShapeDocs::nameOf(int index) const
-{
-    return _private->_shpList.at(index)->name();
+    return _private->_layerList.empty() ? true : false;
 }
 
 int DataManagement::ShapeDocs::listSize() const
 {
-    return _private->_shpList.size();
+    return _private->_layerList.size();
 }
 
 Graphics::GraphicAssistant& DataManagement::ShapeDocs::assistant() const
@@ -170,8 +175,9 @@ Pair<double> Graphics::GraphicAssistant::displayToMapXY(Pair<int> const& display
 }
 
 // make a specified layer fully displayed and centered
-void Graphics::GraphicAssistant::zoomToLayer(Shape const& layer)
+void Graphics::GraphicAssistant::zoomToLayer(std::list<std::shared_ptr<Shape const>>::iterator layerItr)
 {
+    Shape const& layer = **layerItr;
     _private->_mapOrigin = Pair<double>(layer.bounds().xCenter(),
                                         layer.bounds().yCenter());
 
@@ -185,6 +191,8 @@ void Graphics::GraphicAssistant::zoomToLayer(Shape const& layer)
 
     // Ensure the objects to be fully covered.
     _private->_scaleToDisplay = COVER*  scaleXY.smaller();
+
+    _private->_refDocs.refresh();
 }
 
 Bounds Graphics::GraphicAssistant::computeMapHitBounds() const
@@ -194,13 +202,16 @@ Bounds Graphics::GraphicAssistant::computeMapHitBounds() const
     return Bounds(cornerHitMin, cornerHitMax);
 }
 
-std::shared_ptr<Graphics::Shape const> DataManagement::ShapeDocs::findByName(std::string const& name) const
+DataManagement::ShapeDocs::LayerIterator DataManagement::ShapeDocs::findByName(std::string const& name) const
 {
-    for (auto item : _private->_shpList)
-        if (name == item->name())
-            return item;
+    for (auto itr = _private->_layerList.begin(); itr != _private->_layerList.end(); ++itr)
+        if (name == (*itr)->name())
+            return itr;
+}
 
-    return nullptr; // Name not found.
+bool DataManagement::ShapeDocs::layerNotFound(LayerIterator itr) const
+{
+    return itr == _private->_layerList.end() ? true : false;
 }
 
 void Graphics::GraphicAssistant::zoomAtCursor(QPoint const& mousePos, float scaleFactor)
@@ -210,6 +221,8 @@ void Graphics::GraphicAssistant::zoomAtCursor(QPoint const& mousePos, float scal
     _private->_displayOrigin = displayOrigin;
     _private->_mapOrigin = mapOrigin;
     _private->_scaleToDisplay *= scaleFactor;
+
+    _private->_refDocs.refresh();
 }
 
 void Graphics::GraphicAssistant::zoomToAll()
@@ -228,6 +241,8 @@ void Graphics::GraphicAssistant::zoomToAll()
                         float(_private->_paintingRect.height()) / mapRange.y());
 
     _private->_scaleToDisplay = COVER*  scaleXY.smaller();
+
+    _private->_refDocs.refresh();
 }
 
 Bounds DataManagement::ShapeDocs::computeGlobalBounds() const
@@ -235,16 +250,15 @@ Bounds DataManagement::ShapeDocs::computeGlobalBounds() const
     if (isEmpty())
         return Bounds();
 
-    auto itr = _private->_shpList.begin();
-    double xMin = (*itr)->bounds().xMin();
-    double yMin = (*itr)->bounds().yMin();
-    double xMax = (*itr)->bounds().xMax();
-    double yMax = (*itr)->bounds().yMax();
+    double xMin = _private->_layerList.front()->bounds().xMin();
+    double yMin = _private->_layerList.front()->bounds().yMin();
+    double xMax = _private->_layerList.front()->bounds().xMax();
+    double yMax = _private->_layerList.front()->bounds().yMax();
 
-    if (_private->_shpList.size() > 1)
-        for (itr = _private->_shpList.begin() + 1; itr < _private->_shpList.end(); ++itr)
+    if (_private->_layerList.size() > 1)
+        for (auto const& item : _private->_layerList)
         {
-            Bounds localBounds = (*itr)->bounds();
+            Bounds localBounds = item->bounds();
             if (localBounds.xMin() < xMin)
                 xMin = localBounds.xMin();
             if (localBounds.yMin() < yMin)
@@ -258,7 +272,7 @@ Bounds DataManagement::ShapeDocs::computeGlobalBounds() const
     return Bounds(xMin, yMin, xMax, yMax);
 }
 
-void Graphics::GraphicAssistant::moveStart(QPoint const& startPos)
+void Graphics::GraphicAssistant::translationStart(QPoint const& startPos)
 {
     Pair<int> displayOriginNew(startPos);
     Pair<double> mapOriginNew = displayToMapXY(displayOriginNew);
@@ -267,7 +281,21 @@ void Graphics::GraphicAssistant::moveStart(QPoint const& startPos)
     _private->_mapOrigin = mapOriginNew;
 }
 
-void Graphics::GraphicAssistant::moveProcessing(QPoint const& currentPos)
+void Graphics::GraphicAssistant::translationProcessing(QPoint const& currentPos)
 {
     _private->_displayOrigin = Pair<int>(currentPos);
+
+    _private->_refDocs.refresh();
+}
+
+std::vector<std::string const*> DataManagement::ShapeDocs::rawNameList() const
+{
+    std::vector<std::string const*> rawNameList;
+
+    // Painting is in the reverse order of the list,
+    // thus we have to get a reverse list for display.
+    for (auto itr = _private->_layerList.rbegin(); itr != _private->_layerList.rend(); ++itr)
+        rawNameList.push_back(&(*itr)->name());
+
+    return rawNameList;
 }

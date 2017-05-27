@@ -3,6 +3,7 @@
 #include <QFileDialog>
 #include <QTime>
 #include <QLabel>
+#include <QListWidget>
 
 MainWindow::MainWindow(QWidget* parent)
     : QMainWindow(parent), ui(new Ui::MainWindow)
@@ -28,7 +29,11 @@ MainWindow::MainWindow(QWidget* parent)
     cl::DataManagement::ShapeManager::data().setObserver(*this);
 
     // Connect the open file signal.
-    connect(ui->actionOpen, SIGNAL(triggered(bool)), this, SLOT(openFile()));
+    connect(ui->actionOpen_Dataset, SIGNAL(triggered(bool)), this, SLOT(openDataset()));
+    connect(ui->actionClose_All, SIGNAL(triggered(bool)), this, SLOT(closeAll()));
+    connect(ui->actionRemove_Layer, SIGNAL(triggered(bool)), this, SLOT(removeLayer()));
+    connect(ui->actionLayer_Up, SIGNAL(triggered(bool)), this, SLOT(layerUp()));
+    connect(ui->actionLayer_Down, SIGNAL(triggered(bool)), this, SLOT(layerDown()));
     // If the slot function name is wrong,
     // without any error prompts the connection will not work.
 
@@ -37,19 +42,6 @@ MainWindow::MainWindow(QWidget* parent)
 }
 
 MainWindow::~MainWindow() {}
-
-void MainWindow::openFile()
-{
-    QFileDialog dialog(this, tr("Open ESRI Shape File:"), "", tr("*.shp"));
-    if (!dialog.exec())
-        return;
-
-    QStringList fileNames = dialog.selectedFiles();
-    QString qsPath = fileNames.at(0);
-    std::string sPath = qsPath.toStdString();
-
-    cl::DataManagement::ShapeManager::data().addShape(sPath);
-}
 
 void MainWindow::updateDisplay()
 {
@@ -67,4 +59,58 @@ void MainWindow::setLabel(QString const& msg)
 {
     if (_msgLabel != nullptr)
         _msgLabel->setText(msg);
+}
+
+void MainWindow::openDataset()
+{
+    QFileDialog dialog(this, tr("Open ESRI Shape File:"), "", tr("*.shp"));
+    if (!dialog.exec())
+        return;
+
+    QStringList fileNames = dialog.selectedFiles();
+    QString qsPath = fileNames.at(0);
+    std::string sPath = qsPath.toStdString();
+
+    cl::DataManagement::ShapeManager::data().addLayer(sPath);
+}
+
+void MainWindow::closeAll()
+{
+    cl::DataManagement::ShapeManager::data().clearAllLayers();
+}
+
+void MainWindow::removeLayer()
+{
+    QList<QListWidgetItem*> selection = _sidebar->listWidget().selectedItems();
+    if (selection.empty())
+        return;
+
+    auto layerItr = cl::DataManagement::ShapeManager::data().findByName(selection.front()->text().toStdString());
+    cl::DataManagement::ShapeManager::data().removeLayer(layerItr);
+}
+
+void MainWindow::layerUp()
+{
+    QList<QListWidgetItem*> selection = _sidebar->listWidget().selectedItems();
+    if (selection.empty())
+        return;
+    QListWidgetItem* selectedItem = selection.front();
+    if (selectedItem == _sidebar->listWidget().item(0))
+        return;
+
+    auto layerItr = cl::DataManagement::ShapeManager::data().findByName(selectedItem->text().toStdString());
+    cl::DataManagement::ShapeManager::data().rearrangeLayer(layerItr, ++(++layerItr));
+}
+
+void MainWindow::layerDown()
+{
+    QList<QListWidgetItem*> selection = _sidebar->listWidget().selectedItems();
+    if (selection.empty())
+        return;
+    QListWidgetItem* selectedItem = selection.front();
+    if (selectedItem == _sidebar->listWidget().item(_sidebar->listWidget().count() - 1))
+        return;
+
+    auto layerItr = cl::DataManagement::ShapeManager::data().findByName(selectedItem->text().toStdString());
+    cl::DataManagement::ShapeManager::data().rearrangeLayer(layerItr, --layerItr);
 }

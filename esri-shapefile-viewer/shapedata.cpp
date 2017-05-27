@@ -18,14 +18,14 @@ public:
     ~ShapePrivate() {}
 
 private:
-    ShapePrivate(Shape& refThis, Dataset::ShapeDatasetSptr ptrDataset)
+    ShapePrivate(Shape& refThis, Dataset::ShapeDatasetShared const& ptrDataset)
         : _refThis(refThis), _ptrDataset(ptrDataset),
           _borderColor(QColor::fromHsl(qrand()%360, qrand()%256, qrand()%200)),
           _fillColor(QColor::fromHsl(qrand()%360, qrand()%256, qrand()%256)) {}
 
     Shape& _refThis;
 
-    Dataset::ShapeDatasetSptr _ptrDataset;
+    Dataset::ShapeDatasetShared _ptrDataset;
     QColor _borderColor, _fillColor; // Each object has a different but fixed color set.
 };
 
@@ -36,7 +36,7 @@ std::string const& Graphics::Shape::name() const
     return _private->_ptrDataset->name();
 }
 
-Graphics::Shape::Shape(Dataset::ShapeDatasetSptr ptrDataset)
+Graphics::Shape::Shape(Dataset::ShapeDatasetShared const& ptrDataset)
     : _private(std::unique_ptr<ShapePrivate>
                (new ShapePrivate(*this, ptrDataset))) {}
 
@@ -51,7 +51,7 @@ DataManagement::ShapeFactory const& DataManagement::ShapeFactoryESRI::instance()
 
 std::shared_ptr<Graphics::Shape> DataManagement::ShapeFactoryESRI::createShape(std::string const& path) const
 {
-    Dataset::ShapeDatasetSptr ptrDataset(path);
+    Dataset::ShapeDatasetShared ptrDataset(path);
     switch (ptrDataset->type())
     {
     case SHPT_POINT:
@@ -199,19 +199,19 @@ Dataset::ShapeDatasetRC* Dataset::ShapeDatasetRC::addRef()
     return this;
 }
 
-Dataset::ShapeDatasetSptr::ShapeDatasetSptr(std::string const& path)
+Dataset::ShapeDatasetShared::ShapeDatasetShared(std::string const& path)
 {
     _raw = new ShapeDatasetRC(path);
 }
 
-Dataset::ShapeDatasetSptr::ShapeDatasetSptr(ShapeDatasetRC* shapeDataset)
+Dataset::ShapeDatasetShared::ShapeDatasetShared(ShapeDatasetRC* shapeDataset)
     : _raw(shapeDataset) {}
 
 
-Dataset::ShapeDatasetSptr::ShapeDatasetSptr(ShapeDatasetSptr const& rhs)
+Dataset::ShapeDatasetShared::ShapeDatasetShared(ShapeDatasetShared const& rhs)
     : _raw(rhs._raw->addRef()) {}
 
-Dataset::ShapeDatasetSptr& Dataset::ShapeDatasetSptr::operator= (ShapeDatasetSptr const& rhs)
+Dataset::ShapeDatasetShared& Dataset::ShapeDatasetShared::operator= (ShapeDatasetShared const& rhs)
 {
     if(this == &rhs)
         return *this;
@@ -224,13 +224,13 @@ Dataset::ShapeDatasetSptr& Dataset::ShapeDatasetSptr::operator= (ShapeDatasetSpt
     return *this;
 }
 
-//ShapeDatasetSptr::ShapeDatasetSptr(ShapeDatasetSptr const& rhs)
+//ShapeDatasetShared::ShapeDatasetShared(ShapeDatasetShared const& rhs)
 //    : _raw(rhs._raw)
 //{
 //    ++_raw->_refCount;
 //}
 
-//ShapeDatasetSptr& ShapeDatasetSptr::operator= (ShapeDatasetSptr const& rhs)
+//ShapeDatasetShared& ShapeDatasetShared::operator= (ShapeDatasetShared const& rhs)
 //{
 //    if(this == &rhs)
 //        return *this;
@@ -244,7 +244,7 @@ Dataset::ShapeDatasetSptr& Dataset::ShapeDatasetSptr::operator= (ShapeDatasetSpt
 //    return *this;
 //}
 
-Dataset::ShapeDatasetSptr::~ShapeDatasetSptr()
+Dataset::ShapeDatasetShared::~ShapeDatasetShared()
 {
     if(_raw && --_raw->_refCount == 0)
         delete _raw;

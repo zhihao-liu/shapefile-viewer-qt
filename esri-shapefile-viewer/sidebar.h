@@ -3,6 +3,7 @@
 
 #include <QDockWidget>
 
+class QListWidget;
 class QListWidgetItem;
 
 namespace Ui
@@ -19,6 +20,7 @@ public:
     ~Sidebar();
 
     void updateList();
+    QListWidget const& listWidget();
 
 private:
     std::unique_ptr<Ui::Sidebar> ui;
