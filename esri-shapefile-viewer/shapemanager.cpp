@@ -57,7 +57,7 @@ void DataManagement::ShapeDocs::paintAllLayers(QPainter& painter) const
     //        return;
 
     // Refresh the QRect of the painting region on screen.
-    _private->_assistant.setPainterRect(_private->_rawObserver->paintingRect());
+    _private->_assistant.setPaintingRect(_private->_rawObserver->paintingRect());
 
     int countRecordsHit = 0;
     int countRecordsTotal = 0;
@@ -152,7 +152,7 @@ Graphics::GraphicAssistant::GraphicAssistant(DataManagement::ShapeDocs const& re
     : _private(std::unique_ptr<GraphicAssistantPrivate>
                (new GraphicAssistantPrivate(*this, refDocs))) {}
 
-void Graphics::GraphicAssistant::setPainterRect(QRect const& paintingRect)
+void Graphics::GraphicAssistant::setPaintingRect(QRect const& paintingRect)
 {
     _private->_paintingRect = paintingRect;
 }
@@ -204,9 +204,15 @@ Bounds Graphics::GraphicAssistant::computeMapHitBounds() const
 
 DataManagement::ShapeDocs::LayerIterator DataManagement::ShapeDocs::findByName(std::string const& name) const
 {
-    for (auto itr = _private->_layerList.begin(); itr != _private->_layerList.end(); ++itr)
+    auto itr = _private->_layerList.begin();
+    while (itr != _private->_layerList.end())
+    {
         if (name == (*itr)->name())
-            return itr;
+            break;
+        ++itr;
+    }
+
+    return itr; // If the name is not found, std::list.end() will be returned.
 }
 
 bool DataManagement::ShapeDocs::layerNotFound(LayerIterator itr) const

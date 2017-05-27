@@ -4,19 +4,20 @@
 #include <string>
 #include <memory>
 #include <vector>
+#include <functional>
 #include "../shapelib/shapefil.h"
 #include "nsdef.h"
 #include "supports.h"
 
-class QPoint;
 class QPainter;
+class QPoint;
 class QColor;
 
 class cl::Dataset::ShapeRecordUnique
 {
 public:
     ShapeRecordUnique() : _raw(nullptr) {}
-    ShapeRecordUnique(ShapeDatasetRC const& dataset, int index);
+    ShapeRecordUnique(ShapeDatasetShared const& ptrDataset, int index);
 
     // The move constructor and the move assignment operator,
     // used for passing an r-value.
@@ -27,42 +28,20 @@ public:
 
     SHPObject& operator* () { return *_raw; }
     SHPObject* operator-> () { return _raw; }
-    bool operator== (void* that) const { return _raw == that ? true : false; }
-    bool operator!= (void* that) const { return _raw != that ? true : false; }
+
+    bool operator== (void* other) const { return _raw == other ? true : false; }
+    bool operator!= (void* other) const { return _raw != other ? true : false; }
 
 private:
     SHPObject* _raw;
 };
 
-class cl::Dataset::ShapeDatasetRC
-{
-    friend class ShapeDatasetShared;
-
-public:
-    ShapeDatasetRC(std::string const& path);
-    ~ShapeDatasetRC();
-
-    int type () const { return _shpHandle->nShapeType; }
-    SHPHandle const& handle() const { return _shpHandle; }
-    SHPTree const& tree() const { return *_shpTree; }
-    int recordCount() const { return _shpHandle->nRecords;}
-    ShapeRecordUnique readRecord(int index) const;
-    Bounds const& bounds() const { return _bounds; }
-    std::string const& name() const { return _name; }
-    std::vector<int> const filterRecords(Bounds const& mapHitBounds) const;
-
-private:
-    SHPHandle _shpHandle;
-    SHPTree* _shpTree;
-    int _refCount;
-    std::string _name;
-    Bounds _bounds;
-
-    ShapeDatasetRC* addRef();
-};
-
 class cl::Dataset::ShapeDatasetShared
 {
+private:
+    class ShapeDatasetRC;
+    ShapeDatasetRC* _raw;
+
 public:
     ShapeDatasetShared() : _raw(nullptr) {}
     ShapeDatasetShared(std::string const& path);
@@ -73,13 +52,13 @@ public:
 
     ~ShapeDatasetShared();
 
-    ShapeDatasetRC& operator* () { return *_raw; }
-    ShapeDatasetRC* operator-> () { return _raw; }
+    ShapeDatasetRC& operator* () const { return *_raw; }
+    ShapeDatasetRC* operator-> () const { return _raw; }
+
     bool operator== (void* that) const { return _raw == that ? true : false; }
     bool operator!= (void* that) const { return _raw != that ? true : false; }
 
-private:
-    ShapeDatasetRC* _raw;
+    ShapeRecordUnique readRecord(int index) const;
 };
 
 class cl::Graphics::Shape
@@ -98,7 +77,7 @@ protected:
     std::unique_ptr<ShapePrivate> _private;
 };
 
-class cl::Graphics::Point: public Shape
+class cl::Graphics::Point : public Shape
 {
 public:
     Point(Dataset::ShapeDatasetShared ptrDataset): Shape(ptrDataset) {}
@@ -106,20 +85,31 @@ public:
     virtual int draw(QPainter& painter, GraphicAssistant const& assistant) const override;
 };
 
-class cl::Graphics::Polyline: public Shape
+class cl::Graphics::MultiPartShape : public Shape
 {
 public:
-    Polyline(Dataset::ShapeDatasetShared ptrDataset): Shape(ptrDataset) {}
-    virtual ~Polyline() {}
+    MultiPartShape(Dataset::ShapeDatasetShared ptrDataset): Shape(ptrDataset) {}
+    virtual ~MultiPartShape() {}
+
+protected:
     virtual int draw(QPainter& painter, GraphicAssistant const& assistant) const override;
+    virtual void drawPart(QPainter& painter, QPoint const* points, int pointCount) const = 0;
 };
 
-class cl::Graphics::Polygon: public Shape
+class cl::Graphics::Polyline : public MultiPartShape
 {
 public:
-    Polygon(Dataset::ShapeDatasetShared ptrDataset): Shape(ptrDataset) {}
+    Polyline(Dataset::ShapeDatasetShared ptrDataset): MultiPartShape(ptrDataset) {}
+    virtual ~Polyline() {}
+    virtual void drawPart(QPainter& painter, QPoint const* points, int pointCount) const override;
+};
+
+class cl::Graphics::Polygon : public MultiPartShape
+{
+public:
+    Polygon(Dataset::ShapeDatasetShared ptrDataset): MultiPartShape(ptrDataset) {}
     virtual ~Polygon() {}
-    virtual int draw(QPainter& painter, GraphicAssistant const& assistant) const override;
+    virtual void drawPart(QPainter& painter, QPoint const* points, int pointCount) const override;
 };
 
 enum class ShapeProvider { ESRI = 0, AUTODESK, OTHERS };

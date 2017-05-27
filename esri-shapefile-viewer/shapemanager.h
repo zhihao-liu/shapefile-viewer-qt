@@ -66,7 +66,7 @@ class cl::Graphics::GraphicAssistant
 {
 public:
     GraphicAssistant(DataManagement::ShapeDocs const& refDocs);
-    void setPainterRect(QRect const& paintingRect);
+    void setPaintingRect(QRect const& paintingRect);
     Pair<int> mapToDisplayXY(Pair<double> const& mapXY) const;
     Pair<double> displayToMapXY(Pair<int> const& displayXY) const;
     QPoint computePointOnDisplay(SHPObject const& record, int ptIndex) const;
