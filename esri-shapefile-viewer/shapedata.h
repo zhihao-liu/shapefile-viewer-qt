@@ -4,7 +4,6 @@
 #include <string>
 #include <memory>
 #include <vector>
-#include <functional>
 #include "../shapelib/shapefil.h"
 #include "nsdef.h"
 #include "supports.h"
@@ -67,7 +66,7 @@ public:
     virtual ~Shape();
     std::string const& name() const;
     int recordCount() const;
-    Bounds const& bounds() const;
+    Rect<double> const& bounds() const;
 
     // Return the number of records hit according to the index tree.
     virtual int draw(QPainter& painter, GraphicAssistant const& assistant) const = 0;

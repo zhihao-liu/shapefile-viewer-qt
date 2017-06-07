@@ -42,16 +42,16 @@ public:
     SHPHandle const& handle() const { return _shpHandle; }
     SHPTree const& tree() const { return *_shpTree; }
     int recordCount() const { return _shpHandle->nRecords;}
-    Bounds const& bounds() const { return _bounds; }
+    Rect<double> const& bounds() const { return _bounds; }
     std::string const& name() const { return _name; }
-    std::vector<int> const filterRecords(Bounds const& mapHitBounds) const;
+    std::vector<int> const filterRecords(Rect<double> const& mapHitBounds) const;
 
 private:
     SHPHandle _shpHandle;
     SHPTree* _shpTree;
     int _refCount;
     std::string _name;
-    Bounds _bounds;
+    Rect<double> _bounds;
 
     ShapeDatasetRC* addRef();
 };
@@ -106,7 +106,7 @@ std::shared_ptr<Graphics::Shape> DataManagement::ShapeFactoryESRI::createShape(s
 
 int Graphics::Point::draw(QPainter& painter, GraphicAssistant const& assistant) const
 {
-    Bounds mapHitBounds = assistant.computeMapHitBounds();
+    Rect<double> mapHitBounds = assistant.computeMapHitBounds();
     std::vector<int> recordsHit = _private->_ptrDataset->filterRecords(mapHitBounds);
 
     painter.setPen(QPen(_private->_borderColor));
@@ -127,7 +127,7 @@ int Graphics::Point::draw(QPainter& painter, GraphicAssistant const& assistant) 
 
 int Graphics::MultiPartShape::draw(QPainter& painter, GraphicAssistant const& assistant) const
 {
-    Bounds mapHitBounds = assistant.computeMapHitBounds();
+    Rect<double> mapHitBounds = assistant.computeMapHitBounds();
     std::vector<int> recordsHit = _private->_ptrDataset->filterRecords(mapHitBounds);
 
     painter.setPen(QPen(_private->_borderColor));
@@ -180,10 +180,10 @@ Dataset::ShapeDatasetShared::ShapeDatasetRC::ShapeDatasetRC(std::string const& p
     QFileInfo fileInfo(QString::fromStdString(path));
     _name = fileInfo.baseName().toStdString();
 
-    _bounds.set(_shpHandle->adBoundsMin, _shpHandle->adBoundsMax);
+    _bounds = Rect<double>(_shpHandle->adBoundsMin, _shpHandle->adBoundsMax);
 }
 
-Bounds const& Graphics::Shape::bounds() const
+Rect<double> const& Graphics::Shape::bounds() const
 {
     return _private->_ptrDataset->bounds();
 }
@@ -259,7 +259,7 @@ Dataset::ShapeDatasetShared::~ShapeDatasetShared()
         delete _raw;
 }
 
-std::vector<int> const Dataset::ShapeDatasetShared::ShapeDatasetRC::filterRecords(Bounds const& mapHitBounds) const
+std::vector<int> const Dataset::ShapeDatasetShared::ShapeDatasetRC::filterRecords(Rect<double> const& mapHitBounds) const
 {
     double mapHitBoundsMin[2] = {mapHitBounds.xMin(), mapHitBounds.yMin()};
     double mapHitBoundsMax[2] = {mapHitBounds.xMax(), mapHitBounds.yMax()};

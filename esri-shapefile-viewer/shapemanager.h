@@ -20,7 +20,7 @@ class cl::DataManagement::ShapeDocsObserver
 {
 public:
     virtual void updateDisplay() = 0;
-    virtual QRect const paintingRect() const = 0;
+    virtual Rect<int> const paintingRect() const = 0;
     virtual void setLabel(QString const& ) {}
 
 protected:
@@ -47,7 +47,7 @@ public:
     LayerIterator findByName(std::string const& name) const;
     bool layerNotFound(LayerIterator layerItr) const;
     int listSize() const;
-    Bounds computeGlobalBounds() const;
+    Rect<double> computeGlobalBounds() const;
 
 private:
     std::unique_ptr<ShapeDocsPrivate> _private;
@@ -66,11 +66,11 @@ class cl::Graphics::GraphicAssistant
 {
 public:
     GraphicAssistant(DataManagement::ShapeDocs const& refDocs);
-    void setPaintingRect(QRect const& paintingRect);
+    void setPaintingRect(Rect<int> const& paintingRect);
     Pair<int> mapToDisplayXY(Pair<double> const& mapXY) const;
     Pair<double> displayToMapXY(Pair<int> const& displayXY) const;
     QPoint computePointOnDisplay(SHPObject const& record, int ptIndex) const;
-    Bounds computeMapHitBounds() const;
+    Rect<double> computeMapHitBounds() const;
     void zoomToAll();
     void zoomToLayer(DataManagement::ShapeDocs::LayerIterator layerItr);
     void zoomAtCursor(QPoint const& mousePos, float scaleFactor);
