@@ -50,9 +50,9 @@ void MainWindow::updateDisplay()
     update();
 }
 
-QRect const MainWindow::paintingRect() const
+cl::Rect<int> const MainWindow::paintingRect() const
 {
-    return _viewForm->rect();
+    return cl::Rect<int>(_viewForm->rect());
 }
 
 void MainWindow::setLabel(QString const& msg)
@@ -64,14 +64,19 @@ void MainWindow::setLabel(QString const& msg)
 void MainWindow::openDataset()
 {
     QFileDialog dialog(this, tr("Open ESRI Shape File:"), "", tr("*.shp"));
+    dialog.setFileMode(QFileDialog::ExistingFiles); // Accept multiple selections.
+
     if (!dialog.exec())
         return;
 
-    QStringList fileNames = dialog.selectedFiles();
-    QString qsPath = fileNames.at(0);
-    std::string sPath = qsPath.toStdString();
+    bool notInitialized = cl::DataManagement::ShapeManager::data().isEmpty();
 
-    cl::DataManagement::ShapeManager::data().addLayer(sPath);
+    QStringList fileNames = dialog.selectedFiles();
+    for (auto path : fileNames)
+        cl::DataManagement::ShapeManager::data().addLayer(path.toStdString());
+
+    if (notInitialized)
+        cl::DataManagement::ShapeManager::data().assistant().zoomToAll();
 }
 
 void MainWindow::closeAll()

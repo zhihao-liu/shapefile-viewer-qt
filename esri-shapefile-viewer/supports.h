@@ -3,20 +3,20 @@
 
 #include <QRect>
 #include <QPoint>
-#include <QPainter>
 #include "nsdef.h"
 
 template<typename T>
 class cl::Pair
 {
 public:
-    Pair<T>() {}
+    ~Pair<T>() = default;
+    Pair<T>() = default;
 
-    Pair<T>(T x, T y)
+    Pair<T>(T const& x, T const& y)
         : _x(x), _y(y) {}
 
-    Pair<T>(QPoint const& point)
-        : _x(point.x()), _y(point.y()) {}
+    Pair<T>(QPoint const& qPoint)
+        : _x(qPoint.x()), _y(qPoint.y()) {}
 
     template<typename U>
     Pair<T>(Pair<U> const& other)
@@ -27,73 +27,74 @@ public:
 
     QPoint toPoint() const { return QPoint(_x, _y); }
 
-    Pair<T> operator+ (Pair const& other) const
-    { return Pair(_x + other._x, _y + other._y); }
+    template<typename U>
+    Pair<T> operator+ (Pair<U> const& other) const
+    { return Pair<T>(_x + other.x(), _y + other.y()); }
 
-    Pair<T> operator- (Pair const& other) const
-    { return Pair(_x - other._x, _y - other._y); }
+    template<typename U>
+    Pair<T> operator- (Pair<U> const& other) const
+    { return Pair<T>(_x - other.x(), _y - other.y()); }
 
-    Pair<T> operator* (Pair const& other) const
-    { return Pair(_x*  other._x, _y*  other._y); }
+    template<typename U>
+    Pair<T> operator* (Pair<U> const& other) const
+    { return Pair<T>(_x*  other.x(), _y*  other.y()); }
 
-    Pair<T> operator/ (Pair const& other) const
-    { return Pair(_x / other._x, _y / other._y); }
+    template<typename U>
+    Pair<T> operator/ (Pair<U> const& other) const
+    { return Pair<T>(_x / other.x(), _y / other.y()); }
 
     template<typename NumT>
     Pair<T> operator* (NumT const& number) const
-    { return Pair(_x*  number, _y*  number); }
+    { return Pair(_x * number, _y * number); }
 
     template<typename NumT>
     Pair<T> operator/ (NumT const& number) const
     { return Pair(_x / number, _y / number); }
 
-    T smaller()
+    T const& smaller()
     { return _x < _y ? _x : _y; }
 
-    T larger()
+    T const& larger()
     { return _x > _y ? _x : _y; }
-
-    static Pair<int> computeCenter(QRect const& rect)
-    {
-        return Pair<int>((rect.left() + rect.right())*  0.5,
-                         (rect.top() + rect.bottom())*  0.5);
-    }
 
 private:
     T _x, _y;
 };
 
-class cl::Bounds
+template <typename T>
+class cl::Rect
 {
 public:
-    Bounds() {}
-    Bounds(double xMin, double yMin, double xMax, double yMax)
-        : _xMin(xMin), _yMin(yMin), _xMax(xMax), _yMax(yMax) {}
-    Bounds(Pair<double> const& xyMin, Pair<double> const& xyMax)
-        : _xMin(xyMin.x()), _yMin(xyMin.y()), _xMax(xyMax.x()), _yMax(xyMax.y()) {}
+    ~Rect<T>() = default;
+    Rect<T>() = default;
 
-    void set(double const* xyMin, double const* xyMax)
+    Rect<T>(T const& xMin, T const& yMin, T const& xMax, T const& yMax)
+        : _cornerMin(xMin, yMin), _cornerMax(xMax, yMax) {}
+    Rect<T>(Pair<T> const& cornerMin, Pair<T> const& cornerMax)
+        : _cornerMin(cornerMin), _cornerMax(cornerMax) {}
+
+    Rect<T>(T const* xyMin, T const* xyMax)
     {
         if (xyMin == nullptr || xyMax == nullptr)
             return;
-        _xMin = xyMin[0]; _yMin = xyMin[1];
-        _xMax = xyMax[0]; _yMax = xyMax[1];
+
+        _cornerMin = Pair<T>(xyMin[0], xyMin[1]);
+        _cornerMax = Pair<T>(xyMax[0], xyMax[1]);
     }
 
+    Rect<T>(QRect const& qRect)
+        : _cornerMin(qRect.topLeft()), _cornerMax(qRect.bottomRight()) {}
 
-    double xMin() const { return _xMin; }
-    double yMin() const { return _yMin; }
-    double xMax() const { return _xMax; }
-    double yMax() const { return _yMax; }
+    T const& xMin() const { return _cornerMin.x(); }
+    T const& yMin() const { return _cornerMin.y(); }
+    T const& xMax() const { return _cornerMax.x(); }
+    T const& yMax() const { return _cornerMax.y(); }
 
-    double xRange() const { return _xMax - _xMin; }
-    double yRange() const { return _yMax - _yMin; }
-
-    double xCenter() const { return (_xMin + _xMax)*  0.5; }
-    double yCenter() const { return (_yMin + _yMax)*  0.5; }
+    Pair<T> center() const { return (_cornerMin + _cornerMax) * 0.5; }
+    Pair<T> range() const { return _cornerMax - _cornerMin; }
 
 private:
-    double _xMin, _yMin, _xMax, _yMax;
+    Pair<T> _cornerMin, _cornerMax;
 };
 
 #endif // SUPPORTS_H

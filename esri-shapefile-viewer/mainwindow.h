@@ -22,7 +22,7 @@ public:
     ~MainWindow();
 
     virtual void updateDisplay() override;
-    virtual QRect const paintingRect() const override;
+    virtual cl::Rect<int> const paintingRect() const override;
     virtual void setLabel(QString const& msg) override;
 
 private:

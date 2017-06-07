@@ -39,7 +39,7 @@ private:
     Pair<double> _mapOrigin;
     Pair<int> _displayOrigin;
     float _scaleToDisplay;
-    QRect _paintingRect;
+    Rect<int> _paintingRect;
 };
 
 DataManagement::ShapeDocs::ShapeDocs()
@@ -56,7 +56,7 @@ void DataManagement::ShapeDocs::paintAllLayers(QPainter& painter) const
     //    if (isEmpty())
     //        return;
 
-    // Refresh the QRect of the painting region on screen.
+    // Refresh the rect of the painting region on screen.
     _private->_assistant.setPaintingRect(_private->_rawObserver->paintingRect());
 
     int countRecordsHit = 0;
@@ -85,8 +85,6 @@ bool DataManagement::ShapeDocs::addLayer(std::string const& path)
         return false;
 
     _private->_layerList.push_back(shp);
-    if (_private->_layerList.size() == 1)
-        _private->_assistant.zoomToLayer(_private->_layerList.begin());
 
     refresh();
     return true;
@@ -152,7 +150,7 @@ Graphics::GraphicAssistant::GraphicAssistant(DataManagement::ShapeDocs const& re
     : _private(std::unique_ptr<GraphicAssistantPrivate>
                (new GraphicAssistantPrivate(*this, refDocs))) {}
 
-void Graphics::GraphicAssistant::setPaintingRect(QRect const& paintingRect)
+void Graphics::GraphicAssistant::setPaintingRect(Rect<int> const& paintingRect)
 {
     _private->_paintingRect = paintingRect;
 }
@@ -177,29 +175,23 @@ Pair<double> Graphics::GraphicAssistant::displayToMapXY(Pair<int> const& display
 // make a specified layer fully displayed and centered
 void Graphics::GraphicAssistant::zoomToLayer(std::list<std::shared_ptr<Shape const>>::iterator layerItr)
 {
-    Shape const& layer = **layerItr;
-    _private->_mapOrigin = Pair<double>(layer.bounds().xCenter(),
-                                        layer.bounds().yCenter());
+    _private->_mapOrigin = (*layerItr)->bounds().center();
 
-    _private->_displayOrigin = Pair<int>::computeCenter(_private->_paintingRect);
+    _private->_displayOrigin = _private->_paintingRect.center();
 
-    Pair<double> mapRange(layer.bounds().xRange(),
-                          layer.bounds().yRange());
-
-    Pair<float> scaleXY(float(_private->_paintingRect.width()) / mapRange.x(),
-                        float(_private->_paintingRect.height()) / mapRange.y());
+    Pair<float> scaleXY(Pair<float>(_private->_paintingRect.range()) / (*layerItr)->bounds().range());
 
     // Ensure the objects to be fully covered.
-    _private->_scaleToDisplay = COVER*  scaleXY.smaller();
+    _private->_scaleToDisplay = COVER * scaleXY.smaller();
 
     _private->_refDocs.refresh();
 }
 
-Bounds Graphics::GraphicAssistant::computeMapHitBounds() const
+Rect<double> Graphics::GraphicAssistant::computeMapHitBounds() const
 {
-    Pair<double> cornerHitMin = displayToMapXY(Pair<int>(_private->_paintingRect.left(), _private->_paintingRect.bottom()));
-    Pair<double> cornerHitMax = displayToMapXY(Pair<int>(_private->_paintingRect.right(), _private->_paintingRect.top()));
-    return Bounds(cornerHitMin, cornerHitMax);
+    Pair<double> cornerHitMin = displayToMapXY(Pair<int>(_private->_paintingRect.xMin(), _private->_paintingRect.yMax()));
+    Pair<double> cornerHitMax = displayToMapXY(Pair<int>(_private->_paintingRect.xMax(), _private->_paintingRect.yMin()));
+    return Rect<double>(cornerHitMin, cornerHitMax);
 }
 
 DataManagement::ShapeDocs::LayerIterator DataManagement::ShapeDocs::findByName(std::string const& name) const
@@ -233,28 +225,23 @@ void Graphics::GraphicAssistant::zoomAtCursor(QPoint const& mousePos, float scal
 
 void Graphics::GraphicAssistant::zoomToAll()
 {
-    Bounds globalBounds = _private->_refDocs.computeGlobalBounds();
+    Rect<double> globalBounds = _private->_refDocs.computeGlobalBounds();
 
-    _private->_mapOrigin = Pair<double>(globalBounds.xCenter(),
-                                        globalBounds.yCenter());
+    _private->_mapOrigin = globalBounds.center();
 
-    _private->_displayOrigin = Pair<int>::computeCenter(_private->_paintingRect);
+    _private->_displayOrigin = _private->_paintingRect.center();
 
-    Pair<double> mapRange(globalBounds.xRange(),
-                          globalBounds.yRange());
+    Pair<float> scaleXY(Pair<float>(_private->_paintingRect.range()) / globalBounds.range());
 
-    Pair<float> scaleXY(float(_private->_paintingRect.width()) / mapRange.x(),
-                        float(_private->_paintingRect.height()) / mapRange.y());
-
-    _private->_scaleToDisplay = COVER*  scaleXY.smaller();
+    _private->_scaleToDisplay = COVER * scaleXY.smaller();
 
     _private->_refDocs.refresh();
 }
 
-Bounds DataManagement::ShapeDocs::computeGlobalBounds() const
+Rect<double> DataManagement::ShapeDocs::computeGlobalBounds() const
 {
     if (isEmpty())
-        return Bounds();
+        return Rect<double>();
 
     double xMin = _private->_layerList.front()->bounds().xMin();
     double yMin = _private->_layerList.front()->bounds().yMin();
@@ -264,7 +251,7 @@ Bounds DataManagement::ShapeDocs::computeGlobalBounds() const
     if (_private->_layerList.size() > 1)
         for (auto const& item : _private->_layerList)
         {
-            Bounds localBounds = item->bounds();
+            Rect<double> localBounds = item->bounds();
             if (localBounds.xMin() < xMin)
                 xMin = localBounds.xMin();
             if (localBounds.yMin() < yMin)
@@ -275,7 +262,7 @@ Bounds DataManagement::ShapeDocs::computeGlobalBounds() const
                 yMax = localBounds.yMax();
         }
 
-    return Bounds(xMin, yMin, xMax, yMax);
+    return Rect<double>(xMin, yMin, xMax, yMax);
 }
 
 void Graphics::GraphicAssistant::translationStart(QPoint const& startPos)

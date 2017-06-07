@@ -3,11 +3,6 @@
 
 namespace cl
 {
-template<typename T>
-class Pair;
-class Bounds;
-class Drawing;
-
 namespace Dataset
 {
 class ShapeDatasetShared;
@@ -38,5 +33,8 @@ class ShapeDocs;
 class ShapeDocsPrivate;
 class ShapeDocsObserver;
 }
+
+template<typename T> class Pair;
+template<typename T> class Rect;
 }
 #endif // NSDEF_H
