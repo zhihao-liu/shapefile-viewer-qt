@@ -24,7 +24,6 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 
 SOURCES +=\
-        mainwindow.cpp \
     ../shapelib/dbfopen.cpp \
     ../shapelib/shpopen.cpp \
     ../shapelib/shptree.cpp \
@@ -32,17 +31,24 @@ SOURCES +=\
     sidebar.cpp \
     viewform.cpp \
     shapemanager.cpp \
-    shapedata.cpp
+    shapedata.cpp \
+    map.cpp \
+    mainwindow.cpp \
+    mapwindow.cpp
 
-HEADERS  += mainwindow.h \
+HEADERS  += \
     ../shapelib/shapefil.h \
     sidebar.h \
     viewform.h \
-    supports.h \
     shapedata.h \
     shapemanager.h \
-    nsdef.h
+    nsdef.h \
+    support.h \
+    map.h \
+    mainwindow.h \
+    mapwindow.h
 
 FORMS    += mainwindow.ui \
     viewform.ui \
-    sidebar.ui
+    sidebar.ui \
+    mapwindow.ui

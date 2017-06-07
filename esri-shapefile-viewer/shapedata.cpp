@@ -7,7 +7,7 @@
 
 using namespace cl;
 
-class cl::Graphics::ShapePrivate
+class cl::Graphics::Shape::ShapePrivate
 {
     friend class Shape;
     friend class Point;
@@ -56,6 +56,7 @@ private:
     ShapeDatasetRC* addRef();
 };
 
+// Defined here to ensure the unique pointer of ShapePrivate to be destructed properly.
 Graphics::Shape::~Shape() {}
 
 std::string const& Graphics::Shape::name() const
@@ -67,16 +68,16 @@ Graphics::Shape::Shape(Dataset::ShapeDatasetShared const& ptrDataset)
     : _private(std::unique_ptr<ShapePrivate>
                (new ShapePrivate(*this, ptrDataset))) {}
 
-std::unique_ptr<DataManagement::ShapeFactory> DataManagement::ShapeFactoryESRI::_instance = nullptr;
+std::unique_ptr<DataManagement::ShapeFactory> DataManagement::ShapeFactoryEsri::_instance = nullptr;
 
-DataManagement::ShapeFactory const& DataManagement::ShapeFactoryESRI::instance()
+DataManagement::ShapeFactory const& DataManagement::ShapeFactoryEsri::instance()
 {
     if (_instance == nullptr)
-        _instance.reset(new ShapeFactoryESRI());
+        _instance.reset(new ShapeFactoryEsri());
     return *_instance;
 }
 
-std::shared_ptr<Graphics::Shape> DataManagement::ShapeFactoryESRI::createShape(std::string const& path) const
+std::shared_ptr<Graphics::Shape> DataManagement::ShapeFactoryEsri::createShape(std::string const& path) const
 {
     Dataset::ShapeDatasetShared ptrDataset(path);
     switch (ptrDataset->type())
@@ -115,7 +116,7 @@ int Graphics::Point::draw(QPainter& painter, GraphicAssistant const& assistant) 
     for (auto item : recordsHit)
     {
         Dataset::ShapeRecordUnique ptrRecord = _private->_ptrDataset.readRecord(item);
-        QPoint point = assistant.computePointOnDisplay(*ptrRecord, 0);
+        QPoint point = assistant.computePointOnDisplay(*ptrRecord, 0).toQPoint();
 
         int const r = 5;
 
@@ -145,7 +146,7 @@ int Graphics::MultiPartShape::draw(QPainter& painter, GraphicAssistant const& as
 
             int count = 0;
             for (int vtxIndex = ptrRecord->panPartStart[partIndex]; vtxIndex < ptrRecord->panPartStart[partIndex + 1]; ++vtxIndex)
-                partVertices[count++] = assistant.computePointOnDisplay(*ptrRecord, vtxIndex);
+                partVertices[count++] = assistant.computePointOnDisplay(*ptrRecord, vtxIndex).toQPoint();
 
             drawPart(painter, partVertices, nPartVertices);
         }

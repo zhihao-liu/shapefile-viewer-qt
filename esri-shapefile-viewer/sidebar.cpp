@@ -29,7 +29,7 @@ void Sidebar::updateList()
 {
     ui->listWidget->clear();
 
-    auto rawNameList = cl::DataManagement::ShapeManager::data().rawNameList();
+    auto rawNameList = cl::DataManagement::ShapeView::instance().rawNameList();
 
     int i = 0;
     for (auto item : rawNameList)
@@ -42,10 +42,12 @@ void Sidebar::updateList()
 // Zoom to specified layer when double clicking it.
 void Sidebar::doubleClickItem(QListWidgetItem* clickedItem)
 {
+    using namespace cl::DataManagement;
+
     QString layerName = clickedItem->text();
-    auto layerItr = cl::DataManagement::ShapeManager::data().findByName(layerName.toStdString());
-    if (cl::DataManagement::ShapeManager::data().layerNotFound(layerItr))
+    auto layerItr = ShapeView::instance().findByName(layerName.toStdString());
+    if (ShapeView::instance().layerNotFound(layerItr))
         return;
 
-    cl::DataManagement::ShapeManager::data().assistant().zoomToLayer(layerItr);
+    ShapeView::instance().zoomToLayer(layerItr);
 }

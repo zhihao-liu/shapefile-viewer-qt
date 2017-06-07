@@ -4,8 +4,6 @@
 #include <QWheelEvent>
 #include "shapemanager.h"
 
-using namespace cl;
-
 ViewForm::ViewForm(QWidget* parent)
     : QWidget(parent), ui(new Ui::ViewForm)
 {
@@ -17,37 +15,38 @@ ViewForm::ViewForm(QWidget* parent)
 ViewForm::~ViewForm() {}
 
 void ViewForm::paintEvent(QPaintEvent*)
-{
+{    
+    cl::DataManagement::ShapeView::instance().setPaintingRect(rect());
+
     QPainter painter(this);
     painter.begin(this);
     painter.setRenderHint(QPainter::Antialiasing);
 
-    cl::DataManagement::ShapeManager::data().paintAllLayers(painter);
+    cl::DataManagement::ShapeView::instance().draw(painter);
 
     painter.end();
-
 }
 
 void ViewForm::wheelEvent(QWheelEvent* event)
 {
-    QPoint mousePos = event->pos();
+    cl::Pair<int> mousePos(event->pos());
 
     // Zoom in once everytime the wheel turns 90 degrees.
     float scaleFactor = 1 + (float(event->delta()) / 8 / 90);
 
-    cl::DataManagement::ShapeManager::data().assistant().zoomAtCursor(mousePos, scaleFactor);
+    cl::DataManagement::ShapeView::instance().zoomAtCursor(mousePos, scaleFactor);
 }
 
 void ViewForm::mouseDoubleClickEvent(QMouseEvent*)
 {
-    cl::DataManagement::ShapeManager::data().assistant().zoomToAll();
+    cl::DataManagement::ShapeView::instance().zoomToAll();
 }
 
 void ViewForm::mousePressEvent(QMouseEvent* event)
 {
     _mouseDragging = true;
     setCursor(QCursor(Qt::CursorShape::ClosedHandCursor));
-    cl::DataManagement::ShapeManager::data().assistant().translationStart(event->pos());
+    cl::DataManagement::ShapeView::instance().translationStart(event->pos());
 }
 
 void ViewForm::mouseReleaseEvent(QMouseEvent*)
@@ -60,6 +59,6 @@ void ViewForm::mouseMoveEvent(QMouseEvent* event)
 {
     if (_mouseDragging)
     {
-        cl::DataManagement::ShapeManager::data().assistant().translationProcessing(event->pos());
+        cl::DataManagement::ShapeView::instance().translationProcessing(event->pos());
     }
 }

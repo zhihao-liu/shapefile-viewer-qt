@@ -1,8 +1,9 @@
-#ifndef SUPPORTS_H
-#define SUPPORTS_H
+#ifndef SUPPORT_H
+#define SUPPORT_H
 
 #include <QRect>
 #include <QPoint>
+#include <QSize>
 #include "nsdef.h"
 
 template<typename T>
@@ -18,6 +19,9 @@ public:
     Pair<T>(QPoint const& qPoint)
         : _x(qPoint.x()), _y(qPoint.y()) {}
 
+    Pair<T>(QSize const& qSize)
+        : _x(qSize.width()), _y(qSize.height()) {}
+
     template<typename U>
     Pair<T>(Pair<U> const& other)
         : _x(other.x()), _y(other.y()) {}
@@ -25,7 +29,8 @@ public:
     T const& x() const { return _x; }
     T const& y() const { return _y; }
 
-    QPoint toPoint() const { return QPoint(_x, _y); }
+    QPoint toQPoint() const { return QPoint(_x, _y); }
+    QSize toQSize() const { return QSize(_x, _y); }
 
     template<typename U>
     Pair<T> operator+ (Pair<U> const& other) const
@@ -85,6 +90,9 @@ public:
     Rect<T>(QRect const& qRect)
         : _cornerMin(qRect.topLeft()), _cornerMax(qRect.bottomRight()) {}
 
+    QRect toQRect() { return QRect(_cornerMin.toQPoint(), _cornerMax.toQPoint()); }
+
+
     T const& xMin() const { return _cornerMin.x(); }
     T const& yMin() const { return _cornerMin.y(); }
     T const& xMax() const { return _cornerMax.x(); }
@@ -93,8 +101,11 @@ public:
     Pair<T> center() const { return (_cornerMin + _cornerMax) * 0.5; }
     Pair<T> range() const { return _cornerMax - _cornerMin; }
 
+    T xRange() const { return _cornerMax.x() - _cornerMin.x(); }
+    T yRange() const { return _cornerMax.y() - _cornerMin.y(); }
+
 private:
     Pair<T> _cornerMin, _cornerMax;
 };
 
-#endif // SUPPORTS_H
+#endif // SUPPORT_H
