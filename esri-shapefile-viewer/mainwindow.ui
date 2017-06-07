@@ -38,8 +38,22 @@
     <addaction name="actionLayer_Up"/>
     <addaction name="actionLayer_Down"/>
    </widget>
+   <widget class="QMenu" name="menuMap">
+    <property name="title">
+     <string>Map</string>
+    </property>
+    <widget class="QMenu" name="menuCreate_Map">
+     <property name="title">
+      <string>Create Map</string>
+     </property>
+     <addaction name="actionFull_Elements"/>
+     <addaction name="actionNo_Grid_Line"/>
+    </widget>
+    <addaction name="menuCreate_Map"/>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuLayer"/>
+   <addaction name="menuMap"/>
   </widget>
   <widget class="QToolBar" name="mainToolBar">
    <attribute name="toolBarArea">
@@ -78,6 +92,16 @@
   <action name="actionClose_All">
    <property name="text">
     <string>Close All</string>
+   </property>
+  </action>
+  <action name="actionFull_Elements">
+   <property name="text">
+    <string>Full Elements</string>
+   </property>
+  </action>
+  <action name="actionNo_Grid_Line">
+   <property name="text">
+    <string>No Grid Line</string>
    </property>
   </action>
  </widget>

@@ -6,7 +6,7 @@
 #include <vector>
 #include "../shapelib/shapefil.h"
 #include "nsdef.h"
-#include "supports.h"
+#include "support.h"
 
 class QPainter;
 class QPoint;
@@ -15,15 +15,19 @@ class QColor;
 class cl::Dataset::ShapeRecordUnique
 {
 public:
+
+    ~ShapeRecordUnique();
+
     ShapeRecordUnique() : _raw(nullptr) {}
     ShapeRecordUnique(ShapeDatasetShared const& ptrDataset, int index);
+
+    ShapeRecordUnique(ShapeRecordUnique const& rhs) = delete;
+    ShapeRecordUnique& operator= (ShapeRecordUnique const& rhs) = delete;
 
     // The move constructor and the move assignment operator,
     // used for passing an r-value.
     ShapeRecordUnique(ShapeRecordUnique&& rhs);
     ShapeRecordUnique& operator= (ShapeRecordUnique&& rhs);
-
-    ~ShapeRecordUnique();
 
     SHPObject& operator* () { return *_raw; }
     SHPObject* operator-> () { return _raw; }
@@ -73,6 +77,8 @@ public:
 
 protected:
     Shape(Dataset::ShapeDatasetShared const& ptrDataset);
+
+    class ShapePrivate;
     std::unique_ptr<ShapePrivate> _private;
 };
 
@@ -111,7 +117,7 @@ public:
     virtual void drawPart(QPainter& painter, QPoint const* points, int pointCount) const override;
 };
 
-enum class ShapeProvider { ESRI = 0, AUTODESK, OTHERS };
+enum class cl::DataManagement::ShapeProvider { ESRI = 0, AUTODESK, OTHERS };
 
 class cl::DataManagement::ShapeFactory
 {
@@ -123,15 +129,15 @@ protected:
     ShapeFactory() {}
 };
 
-class cl::DataManagement::ShapeFactoryESRI: ShapeFactory
+class cl::DataManagement::ShapeFactoryEsri: ShapeFactory
 {
 public:
-    virtual ~ShapeFactoryESRI() {}
+    virtual ~ShapeFactoryEsri() {}
     virtual std::shared_ptr<Graphics::Shape> createShape(std::string const& path) const override;
     static ShapeFactory const& instance();
 
 private:
-    ShapeFactoryESRI() {}
+    ShapeFactoryEsri() {}
     static std::unique_ptr<ShapeFactory> _instance;
 };
 

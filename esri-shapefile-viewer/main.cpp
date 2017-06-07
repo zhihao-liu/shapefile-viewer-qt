@@ -1,6 +1,6 @@
 #include "mainwindow.h"
 #include <QApplication>
-#include "supports.h"
+#include "support.h"
 
 int main(int argc, char* argv[])
 {

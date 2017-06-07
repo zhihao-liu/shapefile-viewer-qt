@@ -10,156 +10,106 @@
 
 using namespace cl;
 
-class cl::DataManagement::ShapeDocsPrivate
-{
-    friend class ShapeDocs;
-
-private:
-    ShapeDocsPrivate(ShapeDocs& refThis)
-        : _refThis(refThis), _assistant(refThis), _rawObserver(nullptr) {}
-
-    ShapeDocs& _refThis;
-
-    std::list<std::shared_ptr<Graphics::Shape const>> _layerList;
-    Graphics::GraphicAssistant _assistant;
-    ShapeDocsObserver* _rawObserver;
-};
-
-class cl::Graphics::GraphicAssistantPrivate
+class cl::Graphics::GraphicAssistant::GraphicAssistantPrivate
 {
     friend class GraphicAssistant;
 
 private:
-    GraphicAssistantPrivate(GraphicAssistant& refThis, DataManagement::ShapeDocs const& refDocs)
-        : _refThis(refThis), _refDocs(refDocs) {}
+    GraphicAssistantPrivate(GraphicAssistant& refThis, DataManagement::ShapeDoc const& refDoc)
+        : _refThis(refThis), _refDoc(refDoc) {}
 
     GraphicAssistant& _refThis;
 
-    DataManagement::ShapeDocs const& _refDocs;
+    DataManagement::ShapeDoc const& _refDoc;
+
     Pair<double> _mapOrigin;
     Pair<int> _displayOrigin;
     float _scaleToDisplay;
     Rect<int> _paintingRect;
 };
 
-DataManagement::ShapeDocs::ShapeDocs()
-    : _private(std::unique_ptr<ShapeDocsPrivate>
-               (new ShapeDocsPrivate(*this))) {}
-
-void DataManagement::ShapeDocs::setObserver(ShapeDocsObserver& observer)
-{
-    _private->_rawObserver =& observer;
-}
-
-void DataManagement::ShapeDocs::paintAllLayers(QPainter& painter) const
+QString DataManagement::ShapeDoc::drawAllLayers(QPainter& painter, Graphics::GraphicAssistant const& assistant) const
 {
     //    if (isEmpty())
     //        return;
 
-    // Refresh the rect of the painting region on screen.
-    _private->_assistant.setPaintingRect(_private->_rawObserver->paintingRect());
-
     int countRecordsHit = 0;
     int countRecordsTotal = 0;
-    for (auto const& item : _private->_layerList)
+    for (auto const& item : _layerList)
     {
-        countRecordsHit += item->draw(painter, _private->_assistant);
+        countRecordsHit += item->draw(painter, assistant);
         countRecordsTotal += item->recordCount();
     }
 
     float percentageHit = countRecordsHit / (countRecordsTotal + EPS);
 
-    QString msgPercentage = QString::number(percentageHit*  100, 'g', 4);
-    QString msgCountHit = QString::number(countRecordsHit);
-    QString msgCountTotal = QString::number(countRecordsTotal);
+    QString msgCountHit = "    Records Hit: " + QString::number(countRecordsHit);
+    QString msgCountTotal = "    Records Total: " + QString::number(countRecordsTotal);
+    QString msgPercentage = "    Percentage Hit: " + QString::number(percentageHit*  100, 'g', 4) + "%";
 
-    _private->_rawObserver->setLabel("\t\t Records Hit: " + msgCountHit +
-                                     "\t\t Records Total: " + msgCountTotal +
-                                     "\t\t Percentage Hit: " + msgPercentage +"%");
+    return  msgCountHit + msgCountTotal + msgPercentage;
 }
 
-bool DataManagement::ShapeDocs::addLayer(std::string const& path)
+bool DataManagement::ShapeDoc::addLayer(std::string const& path)
 {
-    std::shared_ptr<Graphics::Shape> shp = ShapeFactoryESRI::instance().createShape(path);
+    std::shared_ptr<Graphics::Shape> shp = ShapeFactoryEsri::instance().createShape(path);
     if (!shp)
         return false;
 
-    _private->_layerList.push_back(shp);
+    _layerList.push_back(shp);
 
-    refresh();
     return true;
 }
 
-void DataManagement::ShapeDocs::removeLayer(LayerIterator layerItr)
+void DataManagement::ShapeDoc::removeLayer(LayerIterator layerItr)
 {
-    _private->_layerList.erase(layerItr);
-
-    refresh();
+    _layerList.erase(layerItr);
 }
 
-void DataManagement::ShapeDocs::rearrangeLayer(LayerIterator fromItr, LayerIterator toItr)
+void DataManagement::ShapeDoc::rearrangeLayer(LayerIterator fromItr, LayerIterator toItr)
 {
-    _private->_layerList.insert(toItr, *fromItr);
-    _private->_layerList.erase(fromItr);
-
-    refresh();
+    _layerList.insert(toItr, *fromItr);
+    _layerList.erase(fromItr);
 }
 
-void DataManagement::ShapeDocs::clearAllLayers()
+void DataManagement::ShapeDoc::clearAllLayers()
 {
-    _private->_layerList.clear();
-
-    refresh();
+    _layerList.clear();
 }
 
-void DataManagement::ShapeDocs::refresh() const
+std::unique_ptr<DataManagement::ShapeView> DataManagement::ShapeView::_instance = nullptr;
+
+DataManagement::ShapeView& DataManagement::ShapeView::instance()
 {
-    _private->_rawObserver->updateDisplay();
+    if (_instance == nullptr)
+        _instance.reset(new DataManagement::ShapeView());
+    return *_instance;
 }
 
-void DataManagement::ShapeDocs::clear()
+bool DataManagement::ShapeDoc::isEmpty() const
 {
-    _private->_layerList.clear();
+    return _layerList.empty() ? true : false;
 }
 
-std::unique_ptr<DataManagement::ShapeDocs> DataManagement::ShapeManager::_data = nullptr;
-
-DataManagement::ShapeDocs& DataManagement::ShapeManager::data()
+int DataManagement::ShapeDoc::layerCount() const
 {
-    if (_data == nullptr)
-        _data.reset(new DataManagement::ShapeDocs());
-    return *_data;
+    return _layerList.size();
 }
 
-bool DataManagement::ShapeDocs::isEmpty() const
-{
-    return _private->_layerList.empty() ? true : false;
-}
-
-int DataManagement::ShapeDocs::listSize() const
-{
-    return _private->_layerList.size();
-}
-
-Graphics::GraphicAssistant& DataManagement::ShapeDocs::assistant() const
-{
-    return _private->_assistant;
-}
-
-Graphics::GraphicAssistant::GraphicAssistant(DataManagement::ShapeDocs const& refDocs)
+Graphics::GraphicAssistant::GraphicAssistant(DataManagement::ShapeDoc const& refDoc)
     : _private(std::unique_ptr<GraphicAssistantPrivate>
-               (new GraphicAssistantPrivate(*this, refDocs))) {}
+               (new GraphicAssistantPrivate(*this, refDoc))) {}
 
 void Graphics::GraphicAssistant::setPaintingRect(Rect<int> const& paintingRect)
 {
     _private->_paintingRect = paintingRect;
 }
 
-QPoint Graphics::GraphicAssistant::computePointOnDisplay(SHPObject const& record, int ptIndex) const
+Pair<int> Graphics::GraphicAssistant::computePointOnDisplay(SHPObject const& record, int ptIndex) const
 {
     Pair<double> mapXY(record.padfX[ptIndex], record.padfY[ptIndex]);
     Pair<int> displayXY = mapToDisplayXY(mapXY);
-    return displayXY.toPoint();
+    return displayXY;
 }
 
 Pair<int> Graphics::GraphicAssistant::mapToDisplayXY(Pair<double> const& mapXY) const
@@ -173,7 +123,7 @@ Pair<double> Graphics::GraphicAssistant::displayToMapXY(Pair<int> const& display
 }
 
 // make a specified layer fully displayed and centered
-void Graphics::GraphicAssistant::zoomToLayer(std::list<std::shared_ptr<Shape const>>::iterator layerItr)
+void Graphics::GraphicAssistant::zoomToLayer(LayerIterator layerItr)
 {
     _private->_mapOrigin = (*layerItr)->bounds().center();
 
@@ -183,8 +133,6 @@ void Graphics::GraphicAssistant::zoomToLayer(std::list<std::shared_ptr<Shape con
 
     // Ensure the objects to be fully covered.
     _private->_scaleToDisplay = COVER * scaleXY.smaller();
-
-    _private->_refDocs.refresh();
 }
 
 Rect<double> Graphics::GraphicAssistant::computeMapHitBounds() const
@@ -194,10 +142,10 @@ Rect<double> Graphics::GraphicAssistant::computeMapHitBounds() const
     return Rect<double>(cornerHitMin, cornerHitMax);
 }
 
-DataManagement::ShapeDocs::LayerIterator DataManagement::ShapeDocs::findByName(std::string const& name) const
+LayerIterator DataManagement::ShapeDoc::findByName(std::string const& name)
 {
-    auto itr = _private->_layerList.begin();
-    while (itr != _private->_layerList.end())
+    auto itr = _layerList.begin();
+    while (itr != _layerList.end())
     {
         if (name == (*itr)->name())
             break;
@@ -207,25 +155,23 @@ DataManagement::ShapeDocs::LayerIterator DataManagement::ShapeDocs::findByName(s
     return itr; // If the name is not found, std::list.end() will be returned.
 }
 
-bool DataManagement::ShapeDocs::layerNotFound(LayerIterator itr) const
+bool DataManagement::ShapeDoc::layerNotFound(LayerIterator itr) const
 {
-    return itr == _private->_layerList.end() ? true : false;
+    return itr == _layerList.end() ? true : false;
 }
 
-void Graphics::GraphicAssistant::zoomAtCursor(QPoint const& mousePos, float scaleFactor)
+void Graphics::GraphicAssistant::zoomAtCursor(Pair<int> const& mousePos, float scaleFactor)
 {
     Pair<int> displayOrigin(mousePos);
     Pair<double> mapOrigin = displayToMapXY(displayOrigin);
     _private->_displayOrigin = displayOrigin;
     _private->_mapOrigin = mapOrigin;
     _private->_scaleToDisplay *= scaleFactor;
-
-    _private->_refDocs.refresh();
 }
 
 void Graphics::GraphicAssistant::zoomToAll()
 {
-    Rect<double> globalBounds = _private->_refDocs.computeGlobalBounds();
+    Rect<double> globalBounds = _private->_refDoc.computeGlobalBounds();
 
     _private->_mapOrigin = globalBounds.center();
 
@@ -234,22 +180,20 @@ void Graphics::GraphicAssistant::zoomToAll()
     Pair<float> scaleXY(Pair<float>(_private->_paintingRect.range()) / globalBounds.range());
 
     _private->_scaleToDisplay = COVER * scaleXY.smaller();
-
-    _private->_refDocs.refresh();
 }
 
-Rect<double> DataManagement::ShapeDocs::computeGlobalBounds() const
+Rect<double> DataManagement::ShapeDoc::computeGlobalBounds() const
 {
     if (isEmpty())
         return Rect<double>();
 
-    double xMin = _private->_layerList.front()->bounds().xMin();
-    double yMin = _private->_layerList.front()->bounds().yMin();
-    double xMax = _private->_layerList.front()->bounds().xMax();
-    double yMax = _private->_layerList.front()->bounds().yMax();
+    double xMin = _layerList.front()->bounds().xMin();
+    double yMin = _layerList.front()->bounds().yMin();
+    double xMax = _layerList.front()->bounds().xMax();
+    double yMax = _layerList.front()->bounds().yMax();
 
-    if (_private->_layerList.size() > 1)
-        for (auto const& item : _private->_layerList)
+    if (_layerList.size() > 1)
+        for (auto const& item : _layerList)
         {
             Rect<double> localBounds = item->bounds();
             if (localBounds.xMin() < xMin)
@@ -265,7 +209,7 @@ Rect<double> DataManagement::ShapeDocs::computeGlobalBounds() const
     return Rect<double>(xMin, yMin, xMax, yMax);
 }
 
-void Graphics::GraphicAssistant::translationStart(QPoint const& startPos)
+void Graphics::GraphicAssistant::translationStart(Pair<int> const& startPos)
 {
     Pair<int> displayOriginNew(startPos);
     Pair<double> mapOriginNew = displayToMapXY(displayOriginNew);
@@ -274,21 +218,41 @@ void Graphics::GraphicAssistant::translationStart(QPoint const& startPos)
     _private->_mapOrigin = mapOriginNew;
 }
 
-void Graphics::GraphicAssistant::translationProcessing(QPoint const& currentPos)
+void Graphics::GraphicAssistant::translationProcessing(Pair<int> const& currentPos)
 {
     _private->_displayOrigin = Pair<int>(currentPos);
-
-    _private->_refDocs.refresh();
 }
 
-std::vector<std::string const*> DataManagement::ShapeDocs::rawNameList() const
+std::vector<std::string const*> DataManagement::ShapeDoc::rawNameList() const
 {
     std::vector<std::string const*> rawNameList;
 
     // Painting is in the reverse order of the list,
     // thus we have to get a reverse list for display.
-    for (auto itr = _private->_layerList.rbegin(); itr != _private->_layerList.rend(); ++itr)
+    for (auto itr = _layerList.rbegin(); itr != _layerList.rend(); ++itr)
         rawNameList.push_back(&(*itr)->name());
 
     return rawNameList;
 }
+
+void DataManagement::ShapeView::draw(QPainter& painter)
+{
+    QString recordStat = _shapeDoc.drawAllLayers(painter, _assistant);
+    dynamic_cast<ShapeViewObserver*>(_rawObserver)->setLabel(recordStat);
+}
+
+DataManagement::DisplayManager::DisplayManager()
+    : _shapeDoc(), _assistant(_shapeDoc), _rawObserver(nullptr) {}
+
+Rect<int> const& Graphics::GraphicAssistant::paintingRect() const
+{
+    return _private->_paintingRect;
+}
+
+float Graphics::GraphicAssistant::scale() const
+{
+    return _private->_scaleToDisplay;
+}
+
+// Defined here to ensure the unique pointer of GraphicAssistantPrivate to be destructed properly.
+Graphics::GraphicAssistant::~GraphicAssistant() {}
