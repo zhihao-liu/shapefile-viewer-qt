@@ -10,6 +10,8 @@ namespace Dataset
 {
 class ShapeDatasetShared;
 class ShapeRecordUnique;
+
+enum class ShapeType;
 }
 
 namespace Graphics
@@ -29,8 +31,9 @@ namespace DataManagement
 class ShapeDoc;
 
 class ShapeFactory;
-enum class ShapeProvider;
 class ShapeFactoryEsri;
+
+enum class ShapeProvider;
 
 class DisplayManager;
 class Observer;
@@ -42,10 +45,11 @@ class ShapeViewObserver;
 namespace Map
 {
 class Map;
-enum class MapStyle;
 class MapBuilder;
 class MapDirector;
 class MapObserver;
+
+enum class MapStyle;
 
 class MapElement;
 class GridLine;

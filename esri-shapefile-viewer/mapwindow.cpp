@@ -22,9 +22,8 @@ void MapWindow::setMap(std::shared_ptr<cl::Map::Map> const& map)
 {
     _map = map;
 
-    _map->setPaintingRect(rect());
     _map->setObserver(*this);
-    _map->setShapeDoc(cl::DataManagement::ShapeView::instance().shapeDoc());
+    _map->setPaintingRect(rect());
     _map->zoomToAll();
 }
 

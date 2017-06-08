@@ -19,6 +19,8 @@ class QString;
 class cl::DataManagement::ShapeDoc
 {
 public:
+    ShapeDoc clone() const;
+
     bool isEmpty() const;
     QString drawAllLayers(QPainter& painter, Graphics::GraphicAssistant const& assistant) const;
 
@@ -59,8 +61,8 @@ public:
     float scale() const;
 
 private:
-    class GraphicAssistantPrivate;
-    std::unique_ptr<GraphicAssistantPrivate> _private;
+    class Private;
+    std::unique_ptr<Private> _private;
 };
 
 class cl::DataManagement::Observer
@@ -102,6 +104,8 @@ public:
 
     void draw(QPainter& painter) override;
 
+    ShapeDoc const& shapeDoc() { return _shapeDoc; }
+
     bool addLayer(std::string const& path) { bool flag = _shapeDoc.addLayer(path); if (flag) refresh(); return flag; }
     void removeLayer(LayerIterator layerItr) { _shapeDoc.removeLayer(layerItr); refresh(); }
     void rearrangeLayer(LayerIterator fromItr, LayerIterator toItr) { _shapeDoc.rearrangeLayer(fromItr, toItr); refresh(); }
@@ -115,8 +119,6 @@ public:
     void zoomAtCursor(Pair<int> const& mousePos, float scaleFactor) { _assistant.zoomAtCursor(mousePos, scaleFactor); refresh(); }
     void translationStart(Pair<int> const& startPos) { _assistant.translationStart(startPos); refresh(); }
     void translationProcessing(Pair<int> const& currentPos) { _assistant.translationProcessing(currentPos); refresh(); }
-
-    ShapeDoc const& shapeDoc() { return _shapeDoc; }
 
 private:
     ShapeView() = default;

@@ -3,11 +3,12 @@
 #include <QPainter>
 #include <QColor>
 #include <QFileInfo>
+#include <QTime>
 #include "shapemanager.h"
 
 using namespace cl;
 
-class cl::Graphics::Shape::ShapePrivate
+class cl::Graphics::Shape::Private
 {
     friend class Shape;
     friend class Point;
@@ -15,45 +16,19 @@ class cl::Graphics::Shape::ShapePrivate
     friend class Polyline;
     friend class Polygon;
 
-public:
-    ~ShapePrivate() {}
-
 private:
-    ShapePrivate(Shape& refThis, Dataset::ShapeDatasetShared const& ptrDataset)
-        : _refThis(refThis), _ptrDataset(ptrDataset),
-          _borderColor(QColor::fromHsl(qrand()%360, qrand()%256, qrand()%200)),
-          _fillColor(QColor::fromHsl(qrand()%360, qrand()%256, qrand()%256)) {}
+    Private(Shape& refThis, Dataset::ShapeDatasetShared const& ptrDataset)
+        : _refThis(refThis), _ptrDataset(ptrDataset)
+    {
+        qsrand(QTime::currentTime().second());
+        _borderColor = QColor::fromHsl(qrand()%360, qrand()%256, qrand()%200);
+        _fillColor = QColor::fromHsl(qrand()%360, qrand()%256, qrand()%256);
+    }
 
     Shape& _refThis;
 
     Dataset::ShapeDatasetShared _ptrDataset;
     QColor _borderColor, _fillColor; // Each object has a different but fixed color set.
-};
-
-class cl::Dataset::ShapeDatasetShared::ShapeDatasetRC
-{
-    friend class ShapeDatasetShared;
-
-public:
-    ShapeDatasetRC(std::string const& path);
-    ~ShapeDatasetRC();
-
-    int type () const { return _shpHandle->nShapeType; }
-    SHPHandle const& handle() const { return _shpHandle; }
-    SHPTree const& tree() const { return *_shpTree; }
-    int recordCount() const { return _shpHandle->nRecords;}
-    Rect<double> const& bounds() const { return _bounds; }
-    std::string const& name() const { return _name; }
-    std::vector<int> const filterRecords(Rect<double> const& mapHitBounds) const;
-
-private:
-    SHPHandle _shpHandle;
-    SHPTree* _shpTree;
-    int _refCount;
-    std::string _name;
-    Rect<double> _bounds;
-
-    ShapeDatasetRC* addRef();
 };
 
 // Defined here to ensure the unique pointer of ShapePrivate to be destructed properly.
@@ -65,8 +40,8 @@ std::string const& Graphics::Shape::name() const
 }
 
 Graphics::Shape::Shape(Dataset::ShapeDatasetShared const& ptrDataset)
-    : _private(std::unique_ptr<ShapePrivate>
-               (new ShapePrivate(*this, ptrDataset))) {}
+    : _private(std::unique_ptr<Private>
+               (new Private(*this, ptrDataset))) {}
 
 std::unique_ptr<DataManagement::ShapeFactory> DataManagement::ShapeFactoryEsri::_instance = nullptr;
 
@@ -82,23 +57,18 @@ std::shared_ptr<Graphics::Shape> DataManagement::ShapeFactoryEsri::createShape(s
     Dataset::ShapeDatasetShared ptrDataset(path);
     switch (ptrDataset->type())
     {
-    case SHPT_POINT:
-    case SHPT_POINTZ:
-    case SHPT_POINTM:
+    case Dataset::ShapeType::Point:
         return std::shared_ptr<Graphics::Shape>(new Graphics::Point(ptrDataset));
         break;
 
-    case SHPT_ARC:
-    case SHPT_ARCZ:
-    case SHPT_ARCM:
+    case Dataset::ShapeType::Polyline:
         return std::shared_ptr<Graphics::Shape>(new Graphics::Polyline(ptrDataset));
         break;
 
-    case SHPT_POLYGON:
-    case SHPT_POLYGONZ:
-    case SHPT_POLYGONM:
+    case Dataset::ShapeType::Polygon:
         return std::shared_ptr<Graphics::Shape>(new Graphics::Polygon(ptrDataset));
         break;
+
     default:
         return nullptr;
         break;
@@ -162,7 +132,7 @@ void Graphics::Polyline::drawPart(QPainter& painter, QPoint const* points, int p
 
 void Graphics::Polygon::drawPart(QPainter& painter, QPoint const* points, int pointCount) const
 {
-    painter.drawPolyline(points, pointCount);
+    painter.drawPolygon(points, pointCount);
 }
 
 
@@ -171,10 +141,11 @@ int Graphics::Shape::recordCount() const
     return _private->_ptrDataset->recordCount();
 }
 
-Dataset::ShapeDatasetShared::ShapeDatasetRC::ShapeDatasetRC(std::string const& path)
+Dataset::ShapeDatasetShared::RC::RC(std::string const& path)
     : _shpHandle(nullptr), _shpTree(nullptr), _refCount(1)
 {
     _shpHandle = SHPOpen(path.c_str(), "rb+");
+
     _shpTree = SHPCreateTree(_shpHandle, 2, 10, nullptr, nullptr);
     SHPTreeTrimExtraNodes(_shpTree);
 
@@ -182,13 +153,38 @@ Dataset::ShapeDatasetShared::ShapeDatasetRC::ShapeDatasetRC(std::string const& p
     _name = fileInfo.baseName().toStdString();
 
     _bounds = Rect<double>(_shpHandle->adBoundsMin, _shpHandle->adBoundsMax);
+
+    switch (_shpHandle->nShapeType)
+    {
+    case SHPT_POINT:
+    case SHPT_POINTZ:
+    case SHPT_POINTM:
+        _type = ShapeType::Point;
+        break;
+
+    case SHPT_ARC:
+    case SHPT_ARCZ:
+    case SHPT_ARCM:
+        _type = ShapeType::Polyline;
+        break;
+
+    case SHPT_POLYGON:
+    case SHPT_POLYGONZ:
+    case SHPT_POLYGONM:
+        _type = ShapeType::Polygon;
+        break;
+
+    default:
+        _type = ShapeType::Unknown;
+        break;
+    }
 }
 
 Rect<double> const& Graphics::Shape::bounds() const
 {
     return _private->_ptrDataset->bounds();
 }
-Dataset::ShapeDatasetShared::ShapeDatasetRC::~ShapeDatasetRC()
+Dataset::ShapeDatasetShared::RC::~RC()
 {
     if(_shpHandle)
     {
@@ -203,7 +199,7 @@ Dataset::ShapeDatasetShared::ShapeDatasetRC::~ShapeDatasetRC()
     }
 }
 
-Dataset::ShapeDatasetShared::ShapeDatasetRC* Dataset::ShapeDatasetShared::ShapeDatasetRC::addRef()
+Dataset::ShapeDatasetShared::RC* Dataset::ShapeDatasetShared::RC::addRef()
 {
     ++_refCount;
     return this;
@@ -211,10 +207,10 @@ Dataset::ShapeDatasetShared::ShapeDatasetRC* Dataset::ShapeDatasetShared::ShapeD
 
 Dataset::ShapeDatasetShared::ShapeDatasetShared(std::string const& path)
 {
-    _raw = new ShapeDatasetRC(path);
+    _raw = new RC(path);
 }
 
-Dataset::ShapeDatasetShared::ShapeDatasetShared(ShapeDatasetRC* shapeDataset)
+Dataset::ShapeDatasetShared::ShapeDatasetShared(RC* shapeDataset)
     : _raw(shapeDataset) {}
 
 
@@ -260,7 +256,7 @@ Dataset::ShapeDatasetShared::~ShapeDatasetShared()
         delete _raw;
 }
 
-std::vector<int> const Dataset::ShapeDatasetShared::ShapeDatasetRC::filterRecords(Rect<double> const& mapHitBounds) const
+std::vector<int> const Dataset::ShapeDatasetShared::RC::filterRecords(Rect<double> const& mapHitBounds) const
 {
     double mapHitBoundsMin[2] = {mapHitBounds.xMin(), mapHitBounds.yMin()};
     double mapHitBoundsMax[2] = {mapHitBounds.xMax(), mapHitBounds.yMax()};
@@ -300,4 +296,28 @@ Dataset::ShapeRecordUnique& Dataset::ShapeRecordUnique::operator= (ShapeRecordUn
 Dataset::ShapeRecordUnique Dataset::ShapeDatasetShared::readRecord(int index) const
 {
     return ShapeRecordUnique(*this, index);
+}
+
+std::shared_ptr<Graphics::Shape> Graphics::Shape::clone() const
+{
+    Dataset::ShapeDatasetShared datasetCopy = _private->_ptrDataset;
+
+    switch (datasetCopy->type())
+    {
+    case Dataset::ShapeType::Point:
+        return std::shared_ptr<Graphics::Shape>(new Graphics::Point(datasetCopy));
+        break;
+
+    case Dataset::ShapeType::Polyline:
+        return std::shared_ptr<Graphics::Shape>(new Graphics::Polyline(datasetCopy));
+        break;
+
+    case Dataset::ShapeType::Polygon:
+        return std::shared_ptr<Graphics::Shape>(new Graphics::Polygon(datasetCopy));
+        break;
+
+    default:
+        return nullptr;
+        break;
+    }
 }

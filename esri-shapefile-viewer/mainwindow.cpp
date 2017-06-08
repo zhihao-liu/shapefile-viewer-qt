@@ -66,6 +66,7 @@ void MainWindow::openDataset()
 
     QFileDialog dialog(this, tr("Open ESRI Shape File:"), "", tr("*.shp"));
     dialog.setFileMode(QFileDialog::ExistingFiles); // Accept multiple selections.
+    dialog.setDirectory("/users/liuzhihao/workstation/programs/esri-shapefile-viewer/sample data");
 
     if (!dialog.exec())
         return;
@@ -89,7 +90,7 @@ void MainWindow::removeLayer()
 {
     using namespace cl::DataManagement;
 
-    QList<QListWidgetItem*> selection = _sidebar->listWidget().selectedItems();
+    QList<QListWidgetItem*> selection = _sidebar->listSelection();
     if (selection.empty())
         return;
 
@@ -104,11 +105,11 @@ void MainWindow::layerUp()
 {
     using namespace cl::DataManagement;
 
-    QList<QListWidgetItem*> selection = _sidebar->listWidget().selectedItems();
+    QList<QListWidgetItem*> selection = _sidebar->listSelection();
     if (selection.empty())
         return;
     QListWidgetItem* selectedItem = selection.front();
-    if (selectedItem == _sidebar->listWidget().item(0))
+    if (selectedItem == _sidebar->listFirst())
         return;
 
     auto layerItr = ShapeView::instance().findByName(selectedItem->text().toStdString());
@@ -122,11 +123,11 @@ void MainWindow::layerDown()
 {
     using namespace cl::DataManagement;
 
-    QList<QListWidgetItem*> selection = _sidebar->listWidget().selectedItems();
+    QList<QListWidgetItem*> selection = _sidebar->listSelection();
     if (selection.empty())
         return;
     QListWidgetItem* selectedItem = selection.front();
-    if (selectedItem == _sidebar->listWidget().item(_sidebar->listWidget().count() - 1))
+    if (selectedItem == _sidebar->listLast())
         return;
 
     auto layerItr = ShapeView::instance().findByName(selectedItem->text().toStdString());
@@ -158,7 +159,7 @@ void MainWindow::createMap(cl::Map::MapStyle mapStyle)
         return;
     }
 
-    std::shared_ptr<Map> map = mapDirector->constructMap();
+    std::shared_ptr<Map> map = mapDirector->constructMap(ShapeView::instance().shapeDoc());
 
     _mapWindow->setMap(map);
 }

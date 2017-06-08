@@ -24,9 +24,6 @@ public:
 
     void zoomToAll() { _assistant.zoomToAll(); refresh(); }
 
-    // This is a temporary solution to be refined.
-    void setShapeDoc(DataManagement::ShapeDoc const& shapeDoc) { _shapeDoc = shapeDoc; }
-
 protected:
     std::vector< std::unique_ptr<MapElement> > _elements;
 };
@@ -145,6 +142,10 @@ public:
     virtual ~MapBuilder() = default;
 
     virtual void buildMap() { _map.reset(new Map()); }
+
+    virtual void buildShapes(DataManagement::ShapeDoc const& shapeDoc)
+    { _map->_shapeDoc = shapeDoc.clone(); }
+
     virtual void buildGridLine() = 0;
     virtual void buildScaleBar() = 0;
     virtual void buildNorthPointer() = 0;
@@ -198,9 +199,10 @@ class cl::Map::MapDirector
 public:
     MapDirector(MapBuilder* builder) : _builder(builder) {}
 
-    std::shared_ptr<Map> constructMap()
+    std::shared_ptr<Map> constructMap(DataManagement::ShapeDoc const& shapeDoc)
     {
         _builder->buildMap();
+        _builder->buildShapes(shapeDoc);
         _builder->buildGridLine();
         _builder->buildNorthPointer();
         _builder->buildScaleBar();

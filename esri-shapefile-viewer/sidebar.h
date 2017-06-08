@@ -6,10 +6,7 @@
 class QListWidget;
 class QListWidgetItem;
 
-namespace Ui
-{
-class Sidebar;
-}
+namespace Ui { class Sidebar; }
 
 class Sidebar : public QDockWidget
 {
@@ -20,7 +17,9 @@ public:
     ~Sidebar();
 
     void updateList();
-    QListWidget const& listWidget();
+    QList<QListWidgetItem*> listSelection() const;
+    QListWidgetItem const* listFirst() const;
+    QListWidgetItem const* listLast() const;
 
 private:
     std::unique_ptr<Ui::Sidebar> ui;

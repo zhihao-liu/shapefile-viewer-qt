@@ -3,10 +3,7 @@
 
 #include <QWidget>
 
-namespace Ui
-{
-class ViewForm;
-}
+namespace Ui { class ViewForm; }
 
 class ViewForm : public QWidget
 {

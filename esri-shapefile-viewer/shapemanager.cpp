@@ -10,12 +10,12 @@
 
 using namespace cl;
 
-class cl::Graphics::GraphicAssistant::GraphicAssistantPrivate
+class cl::Graphics::GraphicAssistant::Private
 {
     friend class GraphicAssistant;
 
 private:
-    GraphicAssistantPrivate(GraphicAssistant& refThis, DataManagement::ShapeDoc const& refDoc)
+    Private(GraphicAssistant& refThis, DataManagement::ShapeDoc const& refDoc)
         : _refThis(refThis), _refDoc(refDoc) {}
 
     GraphicAssistant& _refThis;
@@ -97,8 +97,8 @@ int DataManagement::ShapeDoc::layerCount() const
 }
 
 Graphics::GraphicAssistant::GraphicAssistant(DataManagement::ShapeDoc const& refDoc)
-    : _private(std::unique_ptr<GraphicAssistantPrivate>
-               (new GraphicAssistantPrivate(*this, refDoc))) {}
+    : _private(std::unique_ptr<Private>
+               (new Private(*this, refDoc))) {}
 
 void Graphics::GraphicAssistant::setPaintingRect(Rect<int> const& paintingRect)
 {
@@ -254,5 +254,15 @@ float Graphics::GraphicAssistant::scale() const
     return _private->_scaleToDisplay;
 }
 
-// Defined here to ensure the unique pointer of GraphicAssistantPrivate to be destructed properly.
+// Defined here to ensure the unique pointer of Private to be destructed properly.
 Graphics::GraphicAssistant::~GraphicAssistant() {}
+
+DataManagement::ShapeDoc DataManagement::ShapeDoc::clone() const
+{
+    ShapeDoc docCopy;
+
+    for (auto item : _layerList)
+        docCopy._layerList.push_back(item->clone());
+
+    return docCopy;
+}
