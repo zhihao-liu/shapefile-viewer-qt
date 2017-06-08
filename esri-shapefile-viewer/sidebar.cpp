@@ -20,9 +20,19 @@ Sidebar::Sidebar(QWidget* parent)
 
 Sidebar::~Sidebar() {}
 
-QListWidget const& Sidebar::listWidget()
+QList<QListWidgetItem*> Sidebar::listSelection() const
 {
-    return *ui->listWidget;
+    return ui->listWidget->selectedItems();
+}
+
+QListWidgetItem const* Sidebar::listFirst() const
+{
+    return ui->listWidget->item(0);
+}
+
+QListWidgetItem const* Sidebar::listLast() const
+{
+    return ui->listWidget->item(ui->listWidget->count() - 1);
 }
 
 void Sidebar::updateList()

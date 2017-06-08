@@ -4,16 +4,14 @@
 #include <QWidget>
 #include "map.h"
 
-namespace Ui {
-class MapWindow;
-}
+namespace Ui { class MapWindow; }
 
 class MapWindow : public QWidget, public cl::Map::MapObserver
 {
     Q_OBJECT
 
 public:
-    explicit MapWindow(QWidget *parent = 0);
+    explicit MapWindow(QWidget* parent = nullptr);
     ~MapWindow();
 
 public:

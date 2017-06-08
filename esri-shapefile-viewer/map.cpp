@@ -16,10 +16,8 @@ void Map::Map::draw(QPainter& painter)
 
 void Map::GridLine::draw(QPainter& painter, Graphics::GraphicAssistant const& assistant)
 {
-    QPen penPreserved = painter.pen();
-    QBrush brushPreserved = painter.brush();
-    painter.setPen(_lineStyle);
-    painter.setBrush(Qt::NoBrush);
+    painter.setPen(QPen(_lineStyle));
+    painter.setBrush(QBrush(Qt::NoBrush));
 
     Rect<int> const& rect = assistant.paintingRect();
 
@@ -28,32 +26,25 @@ void Map::GridLine::draw(QPainter& painter, Graphics::GraphicAssistant const& as
     for(int i = 0; i < rect.yRange() / gap - 1; ++i)
         for(int j = 0; j < rect.xRange() / gap - 1; ++j)
             painter.drawRect(QRect(QPoint(gap * j, gap * i), QSize(gap, gap)));
-
-    painter.setPen(penPreserved);
-    painter.setBrush(brushPreserved);
 }
 
 void Map::NorthPointer::Flat::draw(QPainter& painter, Graphics::GraphicAssistant const& assistant)
 {
-    QPen penPreserved = painter.pen();
-
     QPen pen(Qt::black);
     pen.setWidth(3);
     painter.setPen(pen);
+    painter.setBrush(QBrush(Qt::black));
 
     Rect<int> const& rect = assistant.paintingRect();
 
     painter.drawLine(QPoint(rect.xRange() - 20, 10), QPoint(rect.xRange() - 25, 15));
     painter.drawLine(QPoint(rect.xRange() - 20, 10), QPoint(rect.xRange() - 15, 15));
     painter.drawLine(QPoint(rect.xRange() - 20, 10), QPoint(rect.xRange() - 20, 30));
-
-    painter.setPen(penPreserved);
 }
 
 void Map::NorthPointer::Style3D::draw(QPainter& painter, Graphics::GraphicAssistant const& assistant)
 {
-    QBrush brushPreserved = painter.brush();
-
+    painter.setPen(QPen(Qt::black));
     painter.setBrush(QBrush(Qt::black, Qt::SolidPattern));
 
     Rect<int> const& rect = assistant.paintingRect();
@@ -65,12 +56,13 @@ void Map::NorthPointer::Style3D::draw(QPainter& painter, Graphics::GraphicAssist
     painter.drawPolygon(points, 3);
     points[2] = QPoint(rect.xRange() - 15, 30);
     painter.drawPolygon(points, 3);
-
-    painter.setBrush(brushPreserved);
 }
 
 void Map::ScaleBar::Text::draw(QPainter &painter, const Graphics::GraphicAssistant &assistant)
 {
+    painter.setPen(QPen(Qt::black));
+    painter.setBrush(QBrush(Qt::NoBrush));
+
     Rect<int> const& rect = assistant.paintingRect();
     float scale = assistant.scale();
 
@@ -82,7 +74,7 @@ void Map::ScaleBar::Text::draw(QPainter &painter, const Graphics::GraphicAssista
 
 void Map::ScaleBar::Graphic::draw(QPainter &painter, const Graphics::GraphicAssistant &assistant)
 {
-    QBrush brushPreserved = painter.brush();
+    painter.setPen(QPen(Qt::black));
 
     Rect<int> const& rect = assistant.paintingRect();
 
@@ -90,6 +82,4 @@ void Map::ScaleBar::Graphic::draw(QPainter &painter, const Graphics::GraphicAssi
     painter.drawRect(QRect(QPoint(rect.xRange() - 30, rect.yRange() - 10), QSize(10, 5)));
     painter.setBrush(QBrush(Qt::green, Qt::SolidPattern));
     painter.drawRect(QRect(QPoint(rect.xRange() - 20, rect.yRange() - 10), QSize(10,5)));
-
-    painter.setBrush(brushPreserved);
 }
