@@ -2,6 +2,7 @@
 #define VIEWFORM_H
 
 #include <QWidget>
+#include <memory>
 
 namespace Ui { class ViewForm; }
 

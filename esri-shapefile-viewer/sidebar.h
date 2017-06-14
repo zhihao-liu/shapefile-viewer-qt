@@ -2,6 +2,7 @@
 #define SIDEBAR_H
 
 #include <QDockWidget>
+#include <memory>
 
 class QListWidget;
 class QListWidgetItem;

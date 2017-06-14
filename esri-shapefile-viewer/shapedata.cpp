@@ -93,7 +93,7 @@ int Graphics::Point::draw(QPainter& painter, GraphicAssistant const& assistant) 
         painter.drawEllipse(point, r, r);
     }
 
-    return recordsHit.size();
+    return int(recordsHit.size());
 }
 
 int Graphics::MultiPartShape::draw(QPainter& painter, GraphicAssistant const& assistant) const
@@ -112,17 +112,18 @@ int Graphics::MultiPartShape::draw(QPainter& painter, GraphicAssistant const& as
         for (int partIndex = 0; partIndex < ptrRecord->nParts; ++partIndex)
         {
             int nPartVertices = ptrRecord->panPartStart[partIndex + 1] - ptrRecord->panPartStart[partIndex];
-            QPoint partVertices[nPartVertices];
+            QPoint* partVertices = new QPoint[nPartVertices];
 
             int count = 0;
             for (int vtxIndex = ptrRecord->panPartStart[partIndex]; vtxIndex < ptrRecord->panPartStart[partIndex + 1]; ++vtxIndex)
                 partVertices[count++] = assistant.computePointOnDisplay(*ptrRecord, vtxIndex).toQPoint();
 
             drawPart(painter, partVertices, nPartVertices);
+            delete[] partVertices;
         }
     }
 
-    return recordsHit.size();
+    return int(recordsHit.size());
 }
 
 void Graphics::Polyline::drawPart(QPainter& painter, QPoint const* points, int pointCount) const
